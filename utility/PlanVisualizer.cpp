@@ -32,6 +32,7 @@
 #include "query_optimizer/cost_model/StarSchemaSimpleCostModel.hpp"
 #include "query_optimizer/expressions/AttributeReference.hpp"
 #include "query_optimizer/expressions/ExprId.hpp"
+#include "query_optimizer/physical/FilterInjection.hpp"
 #include "query_optimizer/physical/HashJoin.hpp"
 #include "query_optimizer/physical/Physical.hpp"
 #include "query_optimizer/physical/PhysicalType.hpp"
@@ -58,6 +59,8 @@ std::string PlanVisualizer::visualize(const P::PhysicalPtr &input) {
 
   color_map_["TableReference"] = "skyblue";
   color_map_["Selection"] = "#90EE90";
+  color_map_["FilterInjection"] = "pink";
+  color_map_["FilterInjection(Anti)"] = "pink";
   color_map_["HashJoin"] = "red";
   color_map_["HashLeftOuterJoin"] = "orange";
   color_map_["HashLeftSemiJoin"] = "orange";
@@ -126,7 +129,8 @@ void PlanVisualizer::visit(const P::PhysicalPtr &input) {
     edge_info.dst_node_id = node_id;
     edge_info.dashed = false;
 
-    if (input->getPhysicalType() == P::PhysicalType::kHashJoin &&
+    if ((input->getPhysicalType() == P::PhysicalType::kHashJoin ||
+         input->getPhysicalType() == P::PhysicalType::kFilterInjection) &&
         child == input->children()[1]) {
       edge_info.dashed = true;
     }
@@ -162,6 +166,20 @@ void PlanVisualizer::visit(const P::PhysicalPtr &input) {
       for (std::size_t i = 0; i < left_attributes.size(); ++i) {
         node_info.labels.emplace_back(
             left_attributes[i]->attribute_alias() + " = " + right_attributes[i]->attribute_alias());
+      }
+      break;
+    }
+    case P::PhysicalType::kFilterInjection: {
+      const P::FilterInjectionPtr filter_injection =
+        std::static_pointer_cast<const P::FilterInjection>(input);
+      node_info.labels.emplace_back(input->getName());
+
+      const auto &probe_attributes = filter_injection->probe_attributes();
+      const auto &build_attributes = filter_injection->build_attributes();
+      for (std::size_t i = 0; i < probe_attributes.size(); ++i) {
+        node_info.labels.emplace_back(
+            probe_attributes[i]->attribute_alias() + " = " +
+                build_attributes[i]->attribute_alias());
       }
       break;
     }

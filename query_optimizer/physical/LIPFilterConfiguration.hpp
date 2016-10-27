@@ -50,17 +50,32 @@ struct LIPFilterBuildInfo {
    * @param build_attribute_in The attribute to build the LIP filter with.
    * @param filter_cardinality_in The LIP filter's cardinality.
    * @param filter_type_in The LIP filter's type.
+   * @param is_anti_filter_in Whether this LIPFilter is an anti-filter.
    */
   LIPFilterBuildInfo(const expressions::AttributeReferencePtr &build_attribute_in,
                      const std::size_t filter_cardinality_in,
-                     const LIPFilterType &filter_type_in)
+                     const LIPFilterType &filter_type_in,
+                     const bool is_anti_filter_in)
       : build_attribute(build_attribute_in),
         filter_cardinality(filter_cardinality_in),
-        filter_type(filter_type_in) {
-  }
+        filter_type(filter_type_in),
+        is_anti_filter(is_anti_filter_in) {}
+
+  /**
+   * @brief Copy constructor.
+   *
+   * @param info The LIPFilter build info to copy.
+   */
+  LIPFilterBuildInfo(const LIPFilterBuildInfo &info)
+      : build_attribute(info.build_attribute),
+        filter_cardinality(info.filter_cardinality),
+        filter_type(info.filter_type),
+        is_anti_filter(info.is_anti_filter) {}
+
   const expressions::AttributeReferencePtr build_attribute;
   const std::size_t filter_cardinality;
   const LIPFilterType filter_type;
+  const bool is_anti_filter;
 };
 
 /**
@@ -79,8 +94,18 @@ struct LIPFilterProbeInfo {
                      const PhysicalPtr &builder_in)
       : probe_attribute(probe_attribute_in),
         build_attribute(build_attribute_in),
-        builder(builder_in) {
-  }
+        builder(builder_in) {}
+
+  /**
+   * @brief Copy constructor.
+   *
+   * @param info The LIPFilter probe info to copy.
+   */
+  LIPFilterProbeInfo(const LIPFilterProbeInfo &info)
+      : probe_attribute(info.probe_attribute),
+        build_attribute(info.build_attribute),
+        builder(info.builder) {}
+
   const expressions::AttributeReferencePtr probe_attribute;
   const expressions::AttributeReferencePtr build_attribute;
   const PhysicalPtr builder;
@@ -112,9 +137,10 @@ class LIPFilterConfiguration {
   void addBuildInfo(const expressions::AttributeReferencePtr &build_attribute,
                     const PhysicalPtr &builder,
                     const std::size_t filter_size,
-                    const LIPFilterType &filter_type) {
+                    const LIPFilterType &filter_type,
+                    const bool is_anti_filter) {
     build_info_map_[builder].emplace_back(
-        build_attribute, filter_size, filter_type);
+        build_attribute, filter_size, filter_type, is_anti_filter);
   }
 
   /**
@@ -153,6 +179,31 @@ class LIPFilterConfiguration {
    */
   const std::map<PhysicalPtr, std::vector<LIPFilterProbeInfo>>& getProbeInfoMap() const {
     return probe_info_map_;
+  }
+
+  /**
+   * @brief Clone a copy of this configuration.
+   *
+   * @return A copy of this confiugration. Caller should take ownership of the
+   *         returned object.
+   */
+  LIPFilterConfiguration* clone() const {
+    LIPFilterConfiguration *new_conf = new LIPFilterConfiguration();
+    for (const auto &build_pair : build_info_map_) {
+      auto &new_build_vec = new_conf->build_info_map_[build_pair.first];
+      const auto &build_vec = build_pair.second;
+      for (const auto &info : build_vec) {
+        new_build_vec.emplace_back(info);
+      }
+    }
+    for (const auto &probe_pair : probe_info_map_) {
+      auto &new_probe_vec = new_conf->probe_info_map_[probe_pair.first];
+      const auto &probe_vec = probe_pair.second;
+      for (const auto &info : probe_vec) {
+        new_probe_vec.emplace_back(info);
+      }
+    }
+    return new_conf;
   }
 
  private:

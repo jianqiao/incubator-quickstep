@@ -74,6 +74,7 @@
 #include "query_optimizer/physical/CreateTable.hpp"
 #include "query_optimizer/physical/DeleteTuples.hpp"
 #include "query_optimizer/physical/DropTable.hpp"
+#include "query_optimizer/physical/FilterInjection.hpp"
 #include "query_optimizer/physical/HashJoin.hpp"
 #include "query_optimizer/physical/InsertSelection.hpp"
 #include "query_optimizer/physical/InsertTuple.hpp"
@@ -93,6 +94,7 @@
 #include "query_optimizer/physical/WindowAggregate.hpp"
 #include "relational_operators/AggregationOperator.hpp"
 #include "relational_operators/BuildHashOperator.hpp"
+#include "relational_operators/BuildLIPFilterOperator.hpp"
 #include "relational_operators/CreateIndexOperator.hpp"
 #include "relational_operators/CreateTableOperator.hpp"
 #include "relational_operators/DeleteOperator.hpp"
@@ -269,6 +271,9 @@ void ExecutionGenerator::generatePlanInternal(
     case P::PhysicalType::kDropTable:
       return convertDropTable(
           std::static_pointer_cast<const P::DropTable>(physical_plan));
+    case P::PhysicalType::kFilterInjection:
+      return convertFilterInjection(
+          std::static_pointer_cast<const P::FilterInjection>(physical_plan));
     case P::PhysicalType::kHashJoin:
       return convertHashJoin(
           std::static_pointer_cast<const P::HashJoin>(physical_plan));
@@ -604,6 +609,56 @@ void ExecutionGenerator::convertSharedSubplanReference(const physical::SharedSub
           attribute_substitution_map_[referenced_attributes[i]->id()];
     }
   }
+}
+
+void ExecutionGenerator::convertFilterInjection(const P::FilterInjectionPtr &physical_plan) {
+  P::PhysicalPtr probe_physical = physical_plan->left();
+  P::PhysicalPtr build_physical = physical_plan->right();
+
+  P::FilterInjectionPtr filter_injection;
+  if (P::SomeFilterInjection::MatchesWithConditionalCast(build_physical, &filter_injection)) {
+    build_physical = filter_injection->left();
+    DCHECK(build_physical->getPhysicalType() != P::PhysicalType::kFilterInjection);
+  }
+
+  // Convert the predicate proto.
+  QueryContext::predicate_id build_side_predicate_index = QueryContext::kInvalidPredicateId;
+  if (physical_plan->build_side_filter_predicate()) {
+    build_side_predicate_index = query_context_proto_->predicates_size();
+
+    std::unique_ptr<const Predicate> build_side_predicate(
+        convertPredicate(physical_plan->build_side_filter_predicate()));
+    query_context_proto_->add_predicates()->CopyFrom(build_side_predicate->getProto());
+  }
+
+  const CatalogRelationInfo *probe_relation_info =
+      findRelationInfoOutputByPhysical(probe_physical);
+  const CatalogRelationInfo *build_relation_info =
+      findRelationInfoOutputByPhysical(build_physical);
+
+  const QueryPlan::DAGNodeIndex build_filter_operator_index =
+      execution_plan_->addRelationalOperator(
+          new BuildLIPFilterOperator(
+              query_handle_->query_id(),
+              *build_relation_info->relation,
+              build_side_predicate_index,
+              build_relation_info->isStoredRelation()));
+
+  if (!build_relation_info->isStoredRelation()) {
+    execution_plan_->addDirectDependency(build_filter_operator_index,
+                                         build_relation_info->producer_operator_index,
+                                         false /* is_pipeline_breaker */);
+  }
+
+  physical_to_output_relation_map_.emplace(
+      std::piecewise_construct,
+      std::forward_as_tuple(physical_plan),
+      std::forward_as_tuple(probe_relation_info->producer_operator_index,
+                            probe_relation_info->relation));
+
+  DCHECK(lip_filter_generator_ != nullptr);
+  lip_filter_generator_->addFilterInjectionInfo(physical_plan,
+                                                build_filter_operator_index);
 }
 
 void ExecutionGenerator::convertHashJoin(const P::HashJoinPtr &physical_plan) {

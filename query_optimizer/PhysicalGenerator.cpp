@@ -30,6 +30,7 @@
 #include "query_optimizer/rules/PruneColumns.hpp"
 #include "query_optimizer/rules/StarSchemaHashJoinOrderOptimization.hpp"
 #include "query_optimizer/rules/SwapProbeBuild.hpp"
+#include "query_optimizer/rules/InjectJoinFilters.hpp"
 #include "query_optimizer/strategy/Aggregate.hpp"
 #include "query_optimizer/strategy/Join.hpp"
 #include "query_optimizer/strategy/OneToOne.hpp"
@@ -49,6 +50,8 @@ DEFINE_bool(reorder_hash_joins, true,
             "joins. The optimization applies a greedy algorithm to favor smaller "
             "cardinality and selective tables to be joined first, which is suitable "
             "for queries on star-schema tables.");
+
+DEFINE_bool(inject_join_filters, true, "Transform HashJoin to FilterInjection.");
 
 DEFINE_bool(use_lip_filters, true,
             "If true, use LIP (Lookahead Information Passing) filters to accelerate "
@@ -108,6 +111,9 @@ P::PhysicalPtr PhysicalGenerator::optimizePlan() {
     rules.emplace_back(new PruneColumns());
   } else {
     rules.emplace_back(new SwapProbeBuild());
+  }
+  if (FLAGS_inject_join_filters) {
+    rules.emplace_back(new InjectJoinFilters());
   }
   if (FLAGS_use_lip_filters) {
     rules.emplace_back(new AttachLIPFilters());
