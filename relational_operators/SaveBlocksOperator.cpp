@@ -21,6 +21,7 @@
 
 #include <vector>
 
+#include "catalog/CatalogRelation.hpp"
 #include "query_execution/WorkOrderProtosContainer.hpp"
 #include "query_execution/WorkOrdersContainer.hpp"
 #include "relational_operators/WorkOrder.pb.h"
@@ -68,6 +69,10 @@ bool SaveBlocksOperator::getAllWorkOrderProtos(WorkOrderProtosContainer *contain
 
 void SaveBlocksOperator::feedInputBlock(const block_id input_block_id, const relation_id input_relation_id) {
   destination_block_ids_.push_back(input_block_id);
+}
+
+void SaveBlocksOperator::updateCatalogOnCompletion() {
+  relation_->getStatisticsMutable()->setExactness(false);
 }
 
 void SaveBlocksWorkOrder::execute() {
