@@ -242,28 +242,55 @@ bool ForemanDistributed::canCollectNewMessages(const tmb::message_type_id messag
                                         kWorkOrderFeedbackMessage);
 }
 
-bool ForemanDistributed::isHashJoinRelatedWorkOrder(const unique_ptr<S::WorkOrderMessage> &message,
+bool ForemanDistributed::isAggregationRelatedWorkOrder(const S::WorkOrderMessage &proto,
+                                                       const size_t next_shiftboss_index_to_schedule,
+                                                       size_t *shiftboss_index_for_aggregation) {
+  const S::WorkOrder &work_order_proto = proto.work_order();
+  QueryContext::aggregation_state_id aggr_state_index;
+
+  switch (work_order_proto.work_order_type()) {
+    case S::AGGREGATION:
+      aggr_state_index = work_order_proto.GetExtension(S::AggregationWorkOrder::aggr_state_index);
+      break;
+    case S::FINALIZE_AGGREGATION:
+      aggr_state_index = work_order_proto.GetExtension(S::FinalizeAggregationWorkOrder::aggr_state_index);
+      break;
+    case S::DESTROY_AGGREGATION_STATE:
+      aggr_state_index = work_order_proto.GetExtension(S::DestroyAggregationStateWorkOrder::aggr_state_index);
+      break;
+    default:
+      return false;
+  }
+
+  policy_enforcer_->getShiftbossIndexForAggregation(
+           proto.query_id(), aggr_state_index, next_shiftboss_index_to_schedule,
+           shiftboss_index_for_aggregation);
+
+  return true;
+}
+
+bool ForemanDistributed::isHashJoinRelatedWorkOrder(const S::WorkOrderMessage &proto,
                                                     const size_t next_shiftboss_index_to_schedule,
                                                     size_t *shiftboss_index_for_hash_join) {
-  const S::WorkOrder &work_order_proto = message->work_order();
+  const S::WorkOrder &work_order_proto = proto.work_order();
   QueryContext::join_hash_table_id join_hash_table_index;
 
   switch (work_order_proto.work_order_type()) {
     case S::BUILD_HASH:
-      join_hash_table_index = work_order_proto.GetExtension(serialization::BuildHashWorkOrder::join_hash_table_index);
-      break;
-    case S::DESTROY_HASH:
-      join_hash_table_index = work_order_proto.GetExtension(serialization::DestroyHashWorkOrder::join_hash_table_index);
+      join_hash_table_index = work_order_proto.GetExtension(S::BuildHashWorkOrder::join_hash_table_index);
       break;
     case S::HASH_JOIN:
-      join_hash_table_index = work_order_proto.GetExtension(serialization::HashJoinWorkOrder::join_hash_table_index);
+      join_hash_table_index = work_order_proto.GetExtension(S::HashJoinWorkOrder::join_hash_table_index);
+      break;
+    case S::DESTROY_HASH:
+      join_hash_table_index = work_order_proto.GetExtension(S::DestroyHashWorkOrder::join_hash_table_index);
       break;
     default:
       return false;
   }
 
   policy_enforcer_->getShiftbossIndexForHashJoin(
-           message->query_id(), join_hash_table_index, next_shiftboss_index_to_schedule,
+           proto.query_id(), join_hash_table_index, next_shiftboss_index_to_schedule,
            shiftboss_index_for_hash_join);
 
   return true;
@@ -274,14 +301,11 @@ void ForemanDistributed::dispatchWorkOrderMessages(const vector<unique_ptr<S::Wo
   size_t shiftboss_index = 0u;
   for (const auto &message : messages) {
     DCHECK(message != nullptr);
-    size_t shiftboss_index_for_hash_join;
-    if (isHashJoinRelatedWorkOrder(message, shiftboss_index, &shiftboss_index_for_hash_join)) {
-      sendWorkOrderMessage(shiftboss_index_for_hash_join, *message);
-      shiftboss_directory_.incrementNumQueuedWorkOrders(shiftboss_index_for_hash_join);
-
-      if (shiftboss_index == shiftboss_index_for_hash_join) {
-        shiftboss_index = (shiftboss_index + 1) % num_shiftbosses;
-      }
+    size_t shiftboss_index_for_particular_work_order_type;
+    if (isAggregationRelatedWorkOrder(*message, shiftboss_index, &shiftboss_index_for_particular_work_order_type)) {
+      dispatchWorkOrderMessagesHelper(*message, shiftboss_index_for_particular_work_order_type, &shiftboss_index);
+    } else if (isHashJoinRelatedWorkOrder(*message, shiftboss_index, &shiftboss_index_for_particular_work_order_type)) {
+      dispatchWorkOrderMessagesHelper(*message, shiftboss_index_for_particular_work_order_type, &shiftboss_index);
     } else {
       sendWorkOrderMessage(shiftboss_index, *message);
       shiftboss_directory_.incrementNumQueuedWorkOrders(shiftboss_index);
@@ -289,6 +313,21 @@ void ForemanDistributed::dispatchWorkOrderMessages(const vector<unique_ptr<S::Wo
       // TODO(zuyu): Take data-locality into account for scheduling.
       shiftboss_index = (shiftboss_index + 1) % num_shiftbosses;
     }
+  }
+}
+
+void ForemanDistributed::dispatchWorkOrderMessagesHelper(const S::WorkOrderMessage &proto,
+                                                         const size_t shiftboss_index_for_particular_work_order_type,
+                                                         size_t *shiftboss_index) {
+  sendWorkOrderMessage(shiftboss_index_for_particular_work_order_type, proto);
+  shiftboss_directory_.incrementNumQueuedWorkOrders(shiftboss_index_for_particular_work_order_type);
+
+  if (*shiftboss_index == shiftboss_index_for_particular_work_order_type) {
+    *shiftboss_index = (*shiftboss_index + 1) % shiftboss_directory_.size();
+  } else {
+    // NOTE(zuyu): This is not the exact round-robin scheduling, as in this case,
+    // <shiftboss_index_for_particular_work_order_type> will be scheduled one
+    // more WorkOrder.
   }
 }
 

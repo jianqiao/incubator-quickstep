@@ -84,7 +84,11 @@ class ForemanDistributed final : public ForemanBase {
   void run() override;
 
  private:
-  bool isHashJoinRelatedWorkOrder(const std::unique_ptr<serialization::WorkOrderMessage> &message,
+  bool isAggregationRelatedWorkOrder(const serialization::WorkOrderMessage &proto,
+                                     const std::size_t next_shiftboss_index_to_schedule,
+                                     std::size_t *shiftboss_index_for_aggregation);
+
+  bool isHashJoinRelatedWorkOrder(const serialization::WorkOrderMessage &proto,
                                   const std::size_t next_shiftboss_index_to_schedule,
                                   std::size_t *shiftboss_index_for_hash_join);
 
@@ -97,6 +101,9 @@ class ForemanDistributed final : public ForemanBase {
   void dispatchWorkOrderMessages(
       const std::vector<std::unique_ptr<serialization::WorkOrderMessage>> &messages);
 
+  void dispatchWorkOrderMessagesHelper(const serialization::WorkOrderMessage &proto,
+                                       const std::size_t shiftboss_index_for_particular_work_order_type,
+                                       std::size_t *shiftboss_index);
   /**
    * @brief Send the given message to the specified worker.
    *
