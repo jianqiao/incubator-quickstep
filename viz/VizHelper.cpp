@@ -44,7 +44,11 @@ void VizHelper::Visualize(const ParseStatement &parse_statement,
                           const std::vector<WorkOrderTimeEntry> *profiling_stats,
                           const CatalogRelation *query_result_relation,
                           const CatalogDatabase *catalog_database,
-                          StorageManager *storage_manager) {
+                          StorageManager *storage_manager,
+                          QueryProcessor *query_processor,
+                          const client_id main_thread_client_id,
+                          const client_id foreman_client_id,
+                          MessageBus *bus) {
   // TODO(jianqiao): give some output for empty relation.
   if (query_result_relation == nullptr) {
     return;
@@ -65,7 +69,11 @@ void VizHelper::Visualize(const ParseStatement &parse_statement,
                                     profiling_stats,
                                     query_result_relation,
                                     catalog_database,
-                                    storage_manager));
+                                    storage_manager,
+                                    query_processor,
+                                    main_thread_client_id,
+                                    foreman_client_id,
+                                    bus));
 
   VizEngine viz_engine(VizContextPtr(context_base.release()));
   viz_engine.execute();

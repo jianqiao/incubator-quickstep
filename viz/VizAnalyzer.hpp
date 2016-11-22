@@ -43,6 +43,7 @@ class CatalogAttribute;
 class CatalogDatabase;
 class CatalogRelation;
 class QueryPlan;
+class QueryProcessor;
 class StorageManager;
 
 namespace viz {
@@ -58,7 +59,11 @@ class VizAnalyzer : public VizObject {
               const std::vector<WorkOrderTimeEntry> *profiling_stats,
               const CatalogRelation *query_result_relation,
               const CatalogDatabase *catalog_database,
-              StorageManager *storage_manager);
+              StorageManager *storage_manager,
+              QueryProcessor *query_processor,
+              const client_id main_thread_client_id,
+              const client_id foreman_client_id,
+              MessageBus *bus);
 
   std::string getName() const override {
     return "VizAnalyzer";
@@ -88,6 +93,22 @@ class VizAnalyzer : public VizObject {
     return storage_manager_;
   }
 
+  QueryProcessor *getQueryProcessor() const  {
+    return query_processor_;
+  }
+
+  const client_id getMainThreadClientID() const  {
+    return main_thread_client_id_;
+  }
+
+  const client_id getForemanClientID() const  {
+    return foreman_client_id_;
+  }
+
+  MessageBus *getMessageBus() const  {
+    return bus_;
+  }
+
   bool findGroupByAttributes(
       std::vector<attribute_id> *group_by_attribute_ids) const;
 
@@ -113,6 +134,10 @@ class VizAnalyzer : public VizObject {
   const CatalogRelation *query_result_relation_;
   const CatalogDatabase *catalog_database_;
   StorageManager *storage_manager_;
+  QueryProcessor *query_processor_;
+  const client_id main_thread_client_id_;
+  const client_id foreman_client_id_;
+  MessageBus *bus_;
 
   std::unordered_map<
       attribute_id, optimizer::expressions::AttributeReferencePtr>

@@ -56,13 +56,20 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
                          const std::vector<WorkOrderTimeEntry> *profiling_stats,
                          const CatalogRelation *query_result_relation,
                          const CatalogDatabase *catalog_database,
-                         StorageManager *storage_manager)
+                         StorageManager *storage_manager,
+                         QueryProcessor *query_processor,
+                         const client_id main_thread_client_id,
+                         const client_id foreman_client_id,
+                         MessageBus *bus)
     : physical_plan_(physical_plan),
       execution_plan_(execution_plan),
       profiling_stats_(profiling_stats),
       query_result_relation_(query_result_relation),
       catalog_database_(catalog_database),
-      storage_manager_(storage_manager) {
+      storage_manager_(storage_manager),
+      query_processor_(query_processor),
+      main_thread_client_id_(main_thread_client_id),
+      foreman_client_id_(foreman_client_id) {
   const std::vector<E::AttributeReferencePtr> physical_attrs =
       physical_plan->getOutputAttributes();
   std::size_t i = 0;

@@ -31,6 +31,7 @@ class CatalogDatabase;
 class CatalogRelation;
 class ParseStatement;
 class QueryPlan;
+class QueryProcessor;
 class StorageManager;
 
 namespace viz {
@@ -46,7 +47,11 @@ class VizHelper {
                         const std::vector<WorkOrderTimeEntry> *profiling_stats,
                         const CatalogRelation *query_result_relation,
                         const CatalogDatabase *catalog_database,
-                        StorageManager *storage_manager);
+                        StorageManager *storage_manager,
+                        QueryProcessor *query_processor,
+                        const client_id main_thread_client_id,
+                        const client_id foreman_client_id,
+                        MessageBus *bus);
 
  private:
   VizHelper() {}

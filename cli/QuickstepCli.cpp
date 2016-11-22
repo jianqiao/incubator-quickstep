@@ -465,7 +465,12 @@ int main(int argc, char* argv[]) {
                                                &foreman.getWorkOrderProfilingResults(query_handle->query_id()),
                                                query_result_relation,
                                                query_processor->getDefaultDatabase(),
-                                               &storage_manager);
+                                               &storage_manager,
+                                               query_processor.get(),
+                                               main_thread_client_id,
+                                               foreman.getBusClientID(),
+                                               &bus
+                                               );
 
           if (query_result_relation) {
             PrintToScreen::PrintRelation(*query_result_relation,
