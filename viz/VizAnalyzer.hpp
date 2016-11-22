@@ -34,6 +34,7 @@
 #include "query_optimizer/physical/Physical.hpp"
 #include "utility/Macros.hpp"
 #include "viz/VizObject.hpp"
+#include "viz/VizStatisticsHelper.hpp"
 
 #include "glog/logging.h"
 
@@ -138,6 +139,8 @@ class VizAnalyzer : public VizObject {
   const client_id main_thread_client_id_;
   const client_id foreman_client_id_;
   MessageBus *bus_;
+
+  RelationStatistics stat_;
 
   std::unordered_map<
       attribute_id, optimizer::expressions::AttributeReferencePtr>

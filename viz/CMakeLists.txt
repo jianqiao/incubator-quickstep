@@ -24,6 +24,7 @@ add_library(quickstep_viz_VizContext VizContext.cpp VizContext.hpp)
 add_library(quickstep_viz_VizEngine VizEngine.cpp VizEngine.hpp)
 add_library(quickstep_viz_VizHelper VizHelper.cpp VizHelper.hpp)
 add_library(quickstep_viz_VizObject VizObject.cpp VizObject.hpp)
+add_library(quickstep_viz_VizStatisticsHelper VizStatisticsHelper.cpp VizStatisticsHelper.hpp)
 
 # Link dependencies:
 target_link_libraries(quickstep_viz_VizAnalyzer
@@ -48,7 +49,8 @@ target_link_libraries(quickstep_viz_VizAnalyzer
                       quickstep_types_operations_unaryoperations_DateExtractOperation
                       quickstep_types_operations_unaryoperations_UnaryOperationID
                       quickstep_utility_Macros
-                      quickstep_viz_VizObject)
+                      quickstep_viz_VizObject
+                      quickstep_viz_VizStatisticsHelper)
 target_link_libraries(quickstep_viz_VizContext
                       quickstep_utility_Macros
                       quickstep_viz_VizObject)
@@ -77,3 +79,10 @@ target_link_libraries(quickstep_viz_VizObject
                       quickstep_utility_Macros
                       quickstep_utility_StringUtil
                       quickstep_utility_TreeStringSerializable)
+target_link_libraries(quickstep_viz_VizStatisticsHelper
+                      quickstep_catalog_CatalogAttribute
+                      quickstep_catalog_CatalogRelation
+                      quickstep_parser_SqlParserWrapper
+                      quickstep_queryexecution_QueryExecutionTypedefs
+                      quickstep_types_TypedValue
+                      quickstep_utility_Macros)

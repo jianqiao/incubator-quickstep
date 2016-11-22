@@ -42,6 +42,7 @@
 #include "types/TypeID.hpp"
 #include "types/operations/unary_operations/DateExtractOperation.hpp"
 #include "types/operations/unary_operations/UnaryOperationID.hpp"
+#include "viz/VizStatisticsHelper.hpp"
 
 #include "glog/logging.h"
 
@@ -69,7 +70,8 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
       storage_manager_(storage_manager),
       query_processor_(query_processor),
       main_thread_client_id_(main_thread_client_id),
-      foreman_client_id_(foreman_client_id) {
+      foreman_client_id_(foreman_client_id),
+      bus_(bus) {
   const std::vector<E::AttributeReferencePtr> physical_attrs =
       physical_plan->getOutputAttributes();
   std::size_t i = 0;
@@ -79,6 +81,14 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
     physical_to_catalog_attribute_map.emplace(physical_attr->id(), &catalog_attr);
     catalog_to_physical_attribute_map.emplace(catalog_attr.getID(), physical_attr);
   }
+
+  VizStatisticsHelper::getStatistics(main_thread_client_id,
+                                     foreman_client_id,
+                                     bus,
+                                     storage_manager,
+                                     query_processor,
+                                     query_result_relation,
+                                     &stat_);
 }
 
 bool VizAnalyzer::findGroupByAttributes(
