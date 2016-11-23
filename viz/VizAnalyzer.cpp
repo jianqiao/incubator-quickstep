@@ -81,7 +81,7 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
     physical_to_catalog_attribute_map.emplace(physical_attr->id(), &catalog_attr);
     catalog_to_physical_attribute_map.emplace(catalog_attr.getID(), physical_attr);
   }
-/*
+
   VizStatisticsHelper::getStatistics(main_thread_client_id,
                                      foreman_client_id,
                                      bus,
@@ -89,7 +89,7 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
                                      query_processor,
                                      query_result_relation,
                                      &stat_);
-                                     */
+
 }
 
 bool VizAnalyzer::findGroupByAttributes(

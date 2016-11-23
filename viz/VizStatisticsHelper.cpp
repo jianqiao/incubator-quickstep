@@ -22,6 +22,7 @@
 
 #include "viz/VizStatisticsHelper.hpp"
 
+#include <cstdio>
 #include <sstream>
 #include <string>
 
@@ -50,20 +51,22 @@ void VizStatisticsHelper::getStatistics(const client_id main_thread_client_id,
 
   std::unique_ptr<SqlParserWrapper> parser_wrapper(new SqlParserWrapper());
   for(const CatalogAttribute &attribute : *query_result_relation) {
-    std::ostringstream query_builder("SELECT COUNT(DISTINCT ");
-    query_builder<<attribute.getName()<<"), MIN(";
-    query_builder<<attribute.getName()<<"), MAX(";
-    query_builder<<attribute.getName()<<") FROM ";
-    query_builder<<query_result_relation->getName()<<";";
+    std::ostringstream query_builder;
+    query_builder<<"SELECT COUNT(DISTINCT \"";
+    query_builder<<attribute.getName()<<"\"), MIN(\"";
+    query_builder<<attribute.getName()<<"\"), MAX(\"";
+    query_builder<<attribute.getName()<<"\") FROM \"";
+    query_builder<<query_result_relation->getName()<<"\";";
+    std::string query_string = query_builder.str();
 
     std::vector<TypedValue> results =
       executeQueryForSingleRow(main_thread_client_id,
-                                    foreman_client_id,
-                                    query_builder.str(),
-                                    bus,
-                                    storage_manager,
-                                    query_processor,
-                                    parser_wrapper.get());
+                               foreman_client_id,
+                               query_string,
+                               bus,
+                               storage_manager,
+                               query_processor,
+                               parser_wrapper.get());
     DCHECK_EQ(3u, results.size());
     DCHECK(results[0].getTypeID() == TypeID::kLong);
     stat->num_distinct_values_.push_back(results[0].getLiteral<std::int64_t>());
@@ -71,17 +74,17 @@ void VizStatisticsHelper::getStatistics(const client_id main_thread_client_id,
     stat->max_values_.push_back(results[2]);
   }
 
-  std::string query_string = "SELECT COUNT(*) FROM ";
+  std::string query_string = "SELECT COUNT(*) FROM \"";
   query_string.append(query_result_relation->getName());
-  query_string.append(";");
+  query_string.append("\";");
   TypedValue num_tuples =
     executeQueryForSingleResult(main_thread_client_id,
-                                    foreman_client_id,
-                                    query_string,
-                                    bus,
-                                    storage_manager,
-                                    query_processor,
-                                    parser_wrapper.get());
+                                foreman_client_id,
+                                query_string,
+                                bus,
+                                storage_manager,
+                                query_processor,
+                                parser_wrapper.get());
   DCHECK(num_tuples.getTypeID() == TypeID::kLong);
   stat->num_tuples_ = num_tuples.getLiteral<std::int64_t>();
 }

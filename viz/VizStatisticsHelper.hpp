@@ -24,16 +24,16 @@
 
 #include <vector>
 
-#include "parser/SqlParserWrapper.hpp"
 #include "query_execution/QueryExecutionTypedefs.hpp"
-#include "types/TypedValue.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep{
 
 class CatalogRelation;
 class QueryProcessor;
+class SqlParserWrapper;
 class StorageManager;
+class TypedValue;
 
 namespace viz{
 
@@ -61,20 +61,20 @@ class VizStatisticsHelper{
 
  private:
   static std::vector<TypedValue> executeQueryForSingleRow(const client_id main_thread_client_id,
-                                                   const client_id foreman_client_id,
-                                                   const std::string &query_string,
-                                                   MessageBus *bus,
-                                                   StorageManager *storage_manager,
-                                                   QueryProcessor *query_processor,
-                                                   SqlParserWrapper *parser_wrapper);
+                                                          const client_id foreman_client_id,
+                                                          const std::string &query_string,
+                                                          MessageBus *bus,
+                                                          StorageManager *storage_manager,
+                                                          QueryProcessor *query_processor,
+                                                          SqlParserWrapper *parser_wrapper);
 
   static TypedValue executeQueryForSingleResult(const client_id main_thread_client_id,
-                                         const client_id foreman_client_id,
-                                         const std::string &query_string,
-                                         MessageBus *bus,
-                                         StorageManager *storage_manager,
-                                         QueryProcessor *query_processor,
-                                         SqlParserWrapper *parser_wrapper);
+                                                const client_id foreman_client_id,
+                                                const std::string &query_string,
+                                                MessageBus *bus,
+                                                StorageManager *storage_manager,
+                                                QueryProcessor *query_processor,
+                                                SqlParserWrapper *parser_wrapper);
 
   VizStatisticsHelper() {}
 
