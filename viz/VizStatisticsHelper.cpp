@@ -22,7 +22,6 @@
 
 #include "viz/VizStatisticsHelper.hpp"
 
-#include <cstdio>
 #include <sstream>
 #include <string>
 
@@ -33,6 +32,8 @@
 #include "parser/SqlParserWrapper.hpp"
 #include "query_optimizer/QueryHandle.hpp"
 #include "query_optimizer/QueryProcessor.hpp"
+#include "storage/ValueAccessor.hpp"
+#include "storage/ValueAccessorUtil.hpp"
 #include "types/TypedValue.hpp"
 
 namespace quickstep {
@@ -144,6 +145,7 @@ std::vector<TypedValue> VizStatisticsHelper::executeQueryForSingleRow(
 
   std::vector<TypedValue> values;
   {
+    /*
     std::vector<block_id> blocks = query_result_relation->getBlocksSnapshot();
     DCHECK_EQ(1u, blocks.size());
 
@@ -163,6 +165,27 @@ std::vector<TypedValue> VizStatisticsHelper::executeQueryForSingleRow(
         values.emplace_back(
             tuple_store.getAttributeValueTyped(*existence_map->begin(), i));
         values[i].ensureNotReference();
+      }
+    }
+    */
+    // change to use ValueAccessor
+    // But only one row?
+    for(const block_id bid : query_result_relation->getBlocksSnapshot()) {
+      BlockReference block = storage_manager->getBlock(bid, *query_result_relation);
+      const TupleStorageSubBlock &tuple_store = block->getTupleStorageSubBlock();
+      DCHECK_EQ(1, tuple_store.numTuples());
+      const std::size_t num_columns = tuple_store.getRelation().size();
+      for(std::size_t column_id = 0; column_id < num_columns; ++column_id) {
+        std::unique_ptr<ValueAccessor> accessor(tuple_store.createValueAccessor());
+        InvokeOnValueAccessorNotAdapter(
+          accessor.get(),
+          [&](auto *accessor) -> void {  // NOLINT(build/c++11)
+            while (accessor->next()) {
+              values.push_back(
+                accessor->getTypedValue(column_id));
+            }
+          }
+        );
       }
     }
   }

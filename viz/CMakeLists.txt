@@ -88,5 +88,7 @@ target_link_libraries(quickstep_viz_VizStatisticsHelper
                       quickstep_queryexecution_QueryExecutionTypedefs
                       quickstep_queryoptimizer_QueryHandle
                       quickstep_queryoptimizer_QueryProcessor
+                      quickstep_storage_ValueAccessor
+                      quickstep_storage_ValueAccessorUtil
                       quickstep_types_TypedValue
                       quickstep_utility_Macros)
