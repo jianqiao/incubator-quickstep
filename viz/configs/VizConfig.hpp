@@ -37,6 +37,8 @@ class StorageManager;
 
 namespace viz {
 
+class RelationStatistics;
+
 /** \addtogroup Viz
  *  @{
  */
@@ -54,6 +56,7 @@ class VizConfig {
   nlohmann::json copyColumn(const attribute_id column_id,
                             const std::string *header = nullptr);
   nlohmann::json copySchema(const std::vector<attribute_id> &attr_ids);
+  nlohmann::json copyStatistics(const RelationStatistics *stat, const std::vector<attribute_id> &attr_ids);
   nlohmann::json copyTrace();
 
   const VizContextPtr context_;

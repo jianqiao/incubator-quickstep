@@ -75,4 +75,5 @@ target_link_libraries(quickstep_viz_configs_VizConfig
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
-                      quickstep_viz_VizObject)
+                      quickstep_viz_VizObject
+                      quickstep_viz_VizStatisticsHelper)

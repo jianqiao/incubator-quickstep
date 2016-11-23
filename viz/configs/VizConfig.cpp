@@ -32,6 +32,7 @@
 #include "storage/ValueAccessorUtil.hpp"
 #include "viz/VizAnalyzer.hpp"
 #include "viz/VizContext.hpp"
+#include "viz/VizStatisticsHelper.hpp"
 #include "viz/VizObject.hpp"
 
 #include "json.hpp"
@@ -82,6 +83,22 @@ json VizConfig::copySchema(const std::vector<attribute_id> &attr_ids) {
     schema.push_back(attr_info);
   }
   return schema;
+}
+
+json VizConfig::copyStatistics(const RelationStatistics *stat, const std::vector<attribute_id> &attr_ids) {
+  json ret;
+  ret["num_tuples"] = stat->num_tuples_;
+  ret["num_distinct_values"] = stat->num_distinct_values_;
+  json minval = json::array();
+  json maxval = json::array();
+  for (std::size_t i = 0; i < attr_ids.size(); ++i) {
+    const CatalogAttribute *attr = relation_->getAttributeById(attr_ids[i]);
+    minval.push_back(attr->getType().printValueToString(stat->min_values_[i]));
+    maxval.push_back(attr->getType().printValueToString(stat->max_values_[i]));
+  }
+  ret["min_values"] = minval;
+  ret["max_values"] = maxval;
+  return ret;
 }
 
 json VizConfig::copyTrace() {

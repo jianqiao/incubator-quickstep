@@ -33,6 +33,7 @@
 namespace quickstep {
 
 class CatalogRelation;
+class RelationStatistics;
 class StorageManager;
 
 namespace viz {
@@ -63,6 +64,8 @@ class DumpRelation : public VizConfig {
     ret["type"] = "DumpRelation";
     ret["schema"] = copySchema(attr_ids);
     ret["data"] = data;
+    const RelationStatistics *stat = context_->get<VizAnalyzer>("VizAnalyzer")->getRelationStatistics();
+    ret["statistics"] = copyStatistics(stat, attr_ids);
 
     return ret;
   }
