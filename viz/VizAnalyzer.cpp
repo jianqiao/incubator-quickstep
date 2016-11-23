@@ -89,7 +89,6 @@ VizAnalyzer::VizAnalyzer(const optimizer::physical::PhysicalPtr &physical_plan,
                                      query_processor,
                                      query_result_relation,
                                      &stat_);
-
 }
 
 bool VizAnalyzer::findGroupByAttributes(

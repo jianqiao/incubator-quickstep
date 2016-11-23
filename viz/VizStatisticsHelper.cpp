@@ -183,6 +183,7 @@ std::vector<TypedValue> VizStatisticsHelper::executeQueryForSingleRow(
             while (accessor->next()) {
               values.push_back(
                 accessor->getTypedValue(column_id));
+              values.back().ensureNotReference();
             }
           }
         );

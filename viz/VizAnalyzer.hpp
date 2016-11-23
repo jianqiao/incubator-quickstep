@@ -110,6 +110,10 @@ class VizAnalyzer : public VizObject {
     return bus_;
   }
 
+  const RelationStatistics *getRelationStatistics() const  {
+    return &stat_;
+  }
+
   bool findGroupByAttributes(
       std::vector<attribute_id> *group_by_attribute_ids) const;
 
