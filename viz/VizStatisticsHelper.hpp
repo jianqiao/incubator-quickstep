@@ -59,6 +59,22 @@ class VizStatisticsHelper{
                             RelationStatistics *stat);
 
  private:
+  std::vector<TypedValue> executeQueryForSingleRow(const client_id main_thread_client_id,
+                                                   const client_id foreman_client_id,
+                                                   const std::string &query_string,
+                                                   MessageBus *bus,
+                                                   StorageManager *storage_manager,
+                                                   QueryProcessor *query_processor,
+                                                   SqlParserWrapper *parser_wrapper);
+  
+  TypedValue executeQueryForSingleResult(const client_id main_thread_client_id,
+                                         const client_id foreman_client_id,
+                                         const std::string &query_string,
+                                         MessageBus *bus,
+                                         StorageManager *storage_manager,
+                                         QueryProcessor *query_processor,
+                                         SqlParserWrapper *parser_wrapper);
+  
   VizStatisticsHelper() {}
 
   DISALLOW_COPY_AND_ASSIGN(VizStatisticsHelper);

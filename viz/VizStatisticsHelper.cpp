@@ -81,6 +81,93 @@ void VizStatisticsHelper::getStatistics(const client_id main_thread_client_id,
   stat->num_tuples_ = num_tuples.getLiteral<std::int64_t>();
 }
 
+TypedValue VizStatisticsHelper::executeQueryForSingleResult(
+    const client_id main_thread_client_id,
+    const client_id foreman_client_id,
+    const std::string &query_string,
+    MessageBus *bus,
+    StorageManager *storage_manager,
+    QueryProcessor *query_processor,
+    SqlParserWrapper *parser_wrapper) {
+  std::vector<TypedValue> results =
+      executeQueryForSingleRow(main_thread_client_id,
+                               foreman_client_id,
+                               query_string,
+                               bus,
+                               storage_manager,
+                               query_processor,
+                               parser_wrapper);
+  DCHECK_EQ(1u, results.size());
+  return results[0];
+}
+
+std::vector<TypedValue> VizStatisticsHelper::executeQueryForSingleRow(
+    const client_id main_thread_client_id,
+    const client_id foreman_client_id,
+    const std::string &query_string,
+    MessageBus *bus,
+    StorageManager *storage_manager,
+    QueryProcessor *query_processor,
+    SqlParserWrapper *parser_wrapper) {
+  parser_wrapper->feedNextBuffer(new std::string(query_string));
+
+  ParseResult result = parser_wrapper->getNextStatement();
+  DCHECK(result.condition == ParseResult::kSuccess);
+
+  const ParseStatement &statement = *result.parsed_statement;
+
+  // Generate the query plan.
+  std::unique_ptr<QueryHandle> query_handle(
+      std::make_unique<QueryHandle>(query_processor->query_id(),
+                                    main_thread_client_id,
+                                    statement.getPriority()));
+  query_processor->generateQueryHandle(statement, query_handle.get());
+  DCHECK(query_handle->getQueryPlanMutable() != nullptr);
+
+  // Use foreman to execute the query plan.
+  QueryExecutionUtil::ConstructAndSendAdmitRequestMessage(
+      main_thread_client_id, foreman_client_id, query_handle.get(), bus);
+
+  QueryExecutionUtil::ReceiveQueryCompletionMessage(main_thread_client_id, bus);
+
+  // Retrieve the scalar result from the result relation.
+  const CatalogRelation *query_result_relation = query_handle->getQueryResultRelation();
+  DCHECK(query_result_relation != nullptr);
+
+  std::vector<TypedValue> values;
+  {
+    std::vector<block_id> blocks = query_result_relation->getBlocksSnapshot();
+    DCHECK_EQ(1u, blocks.size());
+
+    BlockReference block = storage_manager->getBlock(blocks[0], *query_result_relation);
+    const TupleStorageSubBlock &tuple_store = block->getTupleStorageSubBlock();
+    DCHECK_EQ(1, tuple_store.numTuples());
+
+    const std::size_t num_columns = tuple_store.getRelation().size();
+    if (tuple_store.isPacked()) {
+      for (std::size_t i = 0; i < num_columns; ++i) {
+        values.emplace_back(tuple_store.getAttributeValueTyped(0, i));
+        values[i].ensureNotReference();
+      }
+    } else {
+      std::unique_ptr<TupleIdSequence> existence_map(tuple_store.getExistenceMap());
+      for (std::size_t i = 0; i < num_columns; ++i) {
+        values.emplace_back(
+            tuple_store.getAttributeValueTyped(*existence_map->begin(), i));
+        values[i].ensureNotReference();
+      }
+    }
+  }
+
+  // Drop the result relation.
+  DropRelation::Drop(*query_result_relation,
+                     query_processor->getDefaultDatabase(),
+                     storage_manager);
+
+  return values;
+}
+
+
 } // namespace viz
 } // namespace quickstep
 
