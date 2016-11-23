@@ -82,7 +82,11 @@ target_link_libraries(quickstep_viz_VizObject
 target_link_libraries(quickstep_viz_VizStatisticsHelper
                       quickstep_catalog_CatalogAttribute
                       quickstep_catalog_CatalogRelation
+                      quickstep_cli_DropRelation
+                      quickstep_parser_ParseStatement
                       quickstep_parser_SqlParserWrapper
                       quickstep_queryexecution_QueryExecutionTypedefs
+                      quickstep_queryoptimizer_QueryHandle
+                      quickstep_queryoptimizer_QueryProcessor
                       quickstep_types_TypedValue
                       quickstep_utility_Macros)

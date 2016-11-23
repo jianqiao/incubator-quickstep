@@ -27,7 +27,12 @@
 
 #include "catalog/CatalogAttribute.hpp"
 #include "catalog/CatalogRelation.hpp"
+#include "cli/DropRelation.hpp"
+#include "parser/ParseStatement.hpp"
 #include "parser/SqlParserWrapper.hpp"
+#include "query_optimizer/QueryHandle.hpp"
+#include "query_optimizer/QueryProcessor.hpp"
+#include "types/TypedValue.hpp"
 
 namespace quickstep {
 namespace viz {
