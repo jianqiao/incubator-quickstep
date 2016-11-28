@@ -23,6 +23,9 @@ add_library(quickstep_viz_rules_OneDimensionMultiMeasures
 add_library(quickstep_viz_rules_OneDimensionOneMeasure
             ../../empty_src.cpp
             OneDimensionOneMeasure.hpp)
+add_library(quickstep_viz_rules_SplitValue
+            ../../empty_src.cpp
+            SplitValue.hpp)
 add_library(quickstep_viz_rules_TwoDimensionsOneMeasure
             ../../empty_src.cpp
             TwoDimensionsOneMeasure.hpp)
@@ -45,8 +48,7 @@ target_link_libraries(quickstep_viz_rules_OneDimensionMultiMeasures
                       quickstep_viz_VizContext
                       quickstep_viz_VizObject
                       quickstep_viz_configs_BarChart
-                      quickstep_viz_configs_LineChart
-                      )
+                      quickstep_viz_configs_LineChart)
 target_link_libraries(quickstep_viz_rules_OneDimensionOneMeasure
                       quickstep_catalog_CatalogTypedefs
                       quickstep_utility_Macros
@@ -56,6 +58,11 @@ target_link_libraries(quickstep_viz_rules_OneDimensionOneMeasure
                       quickstep_viz_configs_BarChart
                       quickstep_viz_configs_PieChart
                       quickstep_viz_configs_TimeSeries)
+target_link_libraries(quickstep_viz_rules_SplitValue
+                      quickstep_utility_Macros
+                      quickstep_viz_VizAnalyzer
+                      quickstep_viz_VizLiteralHelper
+                      quickstep_viz_VizStatisticsHelper)
 target_link_libraries(quickstep_viz_rules_TwoDimensionsOneMeasure
                       quickstep_catalog_CatalogTypedefs
                       quickstep_utility_Macros

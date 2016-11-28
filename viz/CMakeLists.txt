@@ -23,6 +23,7 @@ add_library(quickstep_viz_VizAnalyzer VizAnalyzer.cpp VizAnalyzer.hpp)
 add_library(quickstep_viz_VizContext VizContext.cpp VizContext.hpp)
 add_library(quickstep_viz_VizEngine VizEngine.cpp VizEngine.hpp)
 add_library(quickstep_viz_VizHelper VizHelper.cpp VizHelper.hpp)
+add_library(quickstep_viz_LiteralHelper ../empty_src.cpp VizLiteralHelper.hpp)
 add_library(quickstep_viz_VizObject VizObject.cpp VizObject.hpp)
 add_library(quickstep_viz_VizStatisticsHelper VizStatisticsHelper.cpp VizStatisticsHelper.hpp)
 
@@ -73,6 +74,9 @@ target_link_libraries(quickstep_viz_VizHelper
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
                       quickstep_viz_VizEngine
+                      quickstep_utility_Macros)
+target_link_libraries(quickstep_viz_LiteralHelper
+                      quickstep_types_TypedValue
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_viz_VizObject
                       quickstep_catalog_CatalogTypedefs
