@@ -63,10 +63,7 @@ target_link_libraries(quickstep_viz_rules_SplitValue
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizLiteralHelper
                       quickstep_viz_VizStatisticsHelper
-                      quickstep_viz_rules_Grouping
-                      quickstep_viz_rules_OneDimensionMultiMeasures
-                      quickstep_viz_rules_OneDimensionOneMeasure
-                      quickstep_viz_rules_TwoDimensionsOneMeasure)
+                      quickstep_viz_rules_Grouping)
 target_link_libraries(quickstep_viz_rules_TwoDimensionsOneMeasure
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer

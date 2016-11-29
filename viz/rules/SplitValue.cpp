@@ -20,13 +20,11 @@
 #include "viz/rules/SplitValue.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 #include "viz/VizLiteralHelper.hpp"
 #include "viz/VizStatisticsHelper.hpp"
 #include "viz/VizAnalyzer.hpp"
-#include "viz/rules/OneDimensionMultiMeasures.hpp"
-#include "viz/rules/OneDimensionOneMeasure.hpp"
-#include "viz/rules/TwoDimensionsOneMeasure.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -70,7 +68,7 @@ bool SplitValue::checkInBoundary(const VizAnalyzer *analyzer,
                                  std::vector<std::pair<double, attribute_id>>& literal) {
   const RelationStatistics *stat = analyzer->getRelationStatistics();
   for (const attribute_id column_id : measures->getAttributeIds()) {
-    double var = VizLiteralHelper::getLiteral(stat->max_values_[column_id]);
+    double var = fabs(VizLiteralHelper::getLiteral(stat->max_values_[column_id]));
     literal.push_back(std::make_pair(var, column_id));
   }
 
@@ -78,8 +76,9 @@ bool SplitValue::checkInBoundary(const VizAnalyzer *analyzer,
   for(int i=0; i<literal.size(); i++)
     std::cout<<literal[i].first<<" "<<literal[i].second<<std::endl;
 
-  std::pair<double, attribute_id> maxx = *std::min_element(literal.begin(), literal.end());
-  std::pair<double, attribute_id> minn = *std::max_element(literal.begin(), literal.end());
+  std::pair<double, attribute_id> minn = *std::min_element(literal.begin(), literal.end());
+  std::pair<double, attribute_id> maxx = *std::max_element(literal.begin(), literal.end());
+
   // check if the max of max_values_ is 10 times the min of max_values, then need to split
   if (maxx.first > minn.first * kDiff)
     return false;
