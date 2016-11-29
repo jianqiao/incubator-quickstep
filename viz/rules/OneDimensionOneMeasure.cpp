@@ -36,47 +36,44 @@ namespace viz {
 /** \addtogroup Viz
  *  @{
  */
-  void OneDimensionOneMeasure::execute() {
-    const AttributeIdVector *dimensions =
-        context_->get<AttributeIdVector>("Dimensions");
-    CHECK_EQ(1uL, dimensions->getAttributeIds().size());
+void OneDimensionOneMeasure::execute() {
+  const AttributeIdVector *dimensions =
+      context_->get<AttributeIdVector>("Dimensions");
+  CHECK_EQ(1uL, dimensions->getAttributeIds().size());
 
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
-    CHECK_EQ(1uL, measures->getAttributeIds().size());
+  const AttributeIdVector *measures =
+      context_->get<AttributeIdVector>("Measures");
+  CHECK_EQ(1uL, measures->getAttributeIds().size());
 
-    std::unique_ptr<VizContext> new_context(new VizContext(context_));
-    new_context->set("trace", new StringValue("OneDimensionOneMeasure"));
+  std::unique_ptr<VizContext> new_context(new VizContext(context_));
+  new_context->set("trace", new StringValue("OneDimensionOneMeasure"));
+  const VizContextPtr new_context_ptr(new_context.release());
 
-    const VizContextPtr new_context_ptr(new_context.release());
+  // Barchart
+  yield(new BarChart(dimensions->getAttributeIds().front(),
+                     measures->getAttributeIds(),
+                     new_context_ptr));
 
-    // Barchart
-    yield(new BarChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
+  // PieChart
+  yield(new PieChart(dimensions->getAttributeIds().front(),
+                     measures->getAttributeIds().front(),
+                     new_context_ptr));
 
-    // PieChart
-    yield(new PieChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds().front(),
-                       new_context_ptr));
-
-    // Try TimeseriesChart
-    const VizAnalyzer *analyzer =
-        context_->get<VizAnalyzer>("VizAnalyzer");
-    const attribute_id dimension_attr_id = dimensions->getAttributeIds().front();
-
-    std::string time_format;
-    if (analyzer->isTime(dimension_attr_id, &time_format)) {
-      yield(new TimeSeries(dimension_attr_id,
-                           time_format,
-                           kInvalidAttributeID,
-                           measures->getAttributeIds().front(),
-                           new_context_ptr));
-    }
-
-    derive(new SplitValue(new_context_ptr));
-
+  // Try TimeseriesChart
+  const VizAnalyzer *analyzer =
+      context_->get<VizAnalyzer>("VizAnalyzer");
+  const attribute_id dimension_attr_id = dimensions->getAttributeIds().front();
+  std::string time_format;
+  if (analyzer->isTime(dimension_attr_id, &time_format)) {
+    yield(new TimeSeries(dimension_attr_id,
+                         time_format,
+                         kInvalidAttributeID,
+                         measures->getAttributeIds().front(),
+                         new_context_ptr));
   }
+
+  derive(new SplitValue(new_context_ptr));
+}
 
 
 /** @} */

@@ -37,31 +37,30 @@ namespace viz {
  */
 
 
-  void OneDimensionMultiMeasures::execute() {
-    const AttributeIdVector *dimensions =
-        context_->get<AttributeIdVector>("Dimensions");
-    CHECK_EQ(1uL, dimensions->getAttributeIds().size());
+void OneDimensionMultiMeasures::execute() {
+  const AttributeIdVector *dimensions =
+      context_->get<AttributeIdVector>("Dimensions");
+  CHECK_EQ(1uL, dimensions->getAttributeIds().size());
 
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
+  const AttributeIdVector *measures =
+      context_->get<AttributeIdVector>("Measures");
+  
+  std::unique_ptr<VizContext> new_context(new VizContext(context_));
+  new_context->set("trace", new StringValue("OneDimensionMultiMeasures"));
+  const VizContextPtr new_context_ptr(new_context.release());
 
-    std::unique_ptr<VizContext> new_context(new VizContext(context_));
-    new_context->set("trace", new StringValue("OneDimensionMultiMeasures"));
+  // Barchart
+  yield(new BarChart(dimensions->getAttributeIds().front(),
+                     measures->getAttributeIds(),
+                     new_context_ptr));
 
-    const VizContextPtr new_context_ptr(new_context.release());
+  // LineChart
+  yield(new LineChart(dimensions->getAttributeIds().front(),
+                      measures->getAttributeIds(),
+                      new_context_ptr));
 
-    // Barchart
-    yield(new BarChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
-
-    // LineChart
-    yield(new LineChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
-
-    derive(new SplitValue(new_context_ptr));
-  }
+  derive(new SplitValue(new_context_ptr));
+}
 
 /** @} */
 

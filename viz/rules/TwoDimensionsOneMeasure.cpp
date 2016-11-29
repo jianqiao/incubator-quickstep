@@ -35,55 +35,52 @@ namespace viz {
  *  @{
  */
 
-  void TwoDimensionsOneMeasure::execute() {
-    const AttributeIdVector *dimensions =
-        context_->get<AttributeIdVector>("Dimensions");
-    CHECK_EQ(2uL, dimensions->getAttributeIds().size());
-    const auto &dimension_attr_ids = dimensions->getAttributeIds();
+void TwoDimensionsOneMeasure::execute() {
+  const AttributeIdVector *dimensions =
+      context_->get<AttributeIdVector>("Dimensions");
+  CHECK_EQ(2uL, dimensions->getAttributeIds().size());
 
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
-    CHECK_EQ(1uL, measures->getAttributeIds().size());
+  const auto &dimension_attr_ids = dimensions->getAttributeIds();
+  const AttributeIdVector *measures =
+      context_->get<AttributeIdVector>("Measures");
+  CHECK_EQ(1uL, measures->getAttributeIds().size());
 
-    std::unique_ptr<VizContext> new_context(new VizContext(context_));
-    new_context->set("trace", new StringValue("TwoDimensionsOneMeasure"));
+  std::unique_ptr<VizContext> new_context(new VizContext(context_));
+  new_context->set("trace", new StringValue("TwoDimensionsOneMeasure"));
+  const VizContextPtr new_context_ptr(new_context.release());
 
-    const VizContextPtr new_context_ptr(new_context.release());
+  // TODO: check columns statistics.
 
-    // TODO: check columns statistics.
+  // Try TimeseriesChart
+  const VizAnalyzer *analyzer =
+      context_->get<VizAnalyzer>("VizAnalyzer");
+  for (std::size_t i = 0; i < 2uL; ++i) {
+    const attribute_id time_attr_id = dimension_attr_ids.at(i);
+    const attribute_id group_attr_id = dimension_attr_ids.at(1-i);
+    std::string time_format;
+    if (analyzer->isTime(time_attr_id, &time_format)) {
+      yield(new TimeSeries(time_attr_id,
+                           time_format,
+                           group_attr_id,
+                           measures->getAttributeIds().front(),
+                           new_context_ptr));
 
-    // Try TimeseriesChart
-    const VizAnalyzer *analyzer =
-        context_->get<VizAnalyzer>("VizAnalyzer");
-
-    for (std::size_t i = 0; i < 2uL; ++i) {
-      const attribute_id time_attr_id = dimension_attr_ids.at(i);
-      const attribute_id group_attr_id = dimension_attr_ids.at(1-i);
-
-      std::string time_format;
-      if (analyzer->isTime(time_attr_id, &time_format)) {
-        yield(new TimeSeries(time_attr_id,
-                             time_format,
-                             group_attr_id,
-                             measures->getAttributeIds().front(),
-                             new_context_ptr));
-
-        yield(new StackedAreaTimeSeries(time_attr_id,
-                                        time_format,
-                                        group_attr_id,
-                                        measures->getAttributeIds().front(),
-                                        new_context_ptr));
-      }
-    }
-
-    // HeatMap
-    for (std::size_t i = 0; i < 2uL; ++i) {
-        yield(new HeatMap(dimension_attr_ids.at(i),
-                          dimension_attr_ids.at(1-i),
-                          measures->getAttributeIds().front(),
-                          new_context_ptr));
+      yield(new StackedAreaTimeSeries(time_attr_id,
+                                      time_format,
+                                      group_attr_id,
+                                      measures->getAttributeIds().front(),
+                                      new_context_ptr));
     }
   }
+  
+  // HeatMap
+  for (std::size_t i = 0; i < 2uL; ++i) {
+      yield(new HeatMap(dimension_attr_ids.at(i),
+                        dimension_attr_ids.at(1-i),
+                        measures->getAttributeIds().front(),
+                        new_context_ptr));
+  }
+}
 
 
 /** @} */
