@@ -50,7 +50,7 @@ class VizConfig {
   virtual nlohmann::json toJSON() = 0;
 
  protected:
-  explicit VizConfig(const VizContextPtr &context);
+  explicit VizConfig(const VizContextPtr &context, const std::string &name);
 
 
   nlohmann::json copyColumn(const attribute_id column_id,
@@ -62,6 +62,8 @@ class VizConfig {
   const VizContextPtr context_;
   const CatalogRelation *relation_;
   StorageManager *storage_manager_;
+
+  std::string name_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(VizConfig);

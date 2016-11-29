@@ -43,8 +43,9 @@ class HeatMap : public VizConfig {
   HeatMap(const attribute_id row_attr_id,
           const attribute_id col_attr_id,
           const attribute_id measure_attr_id,
-          const VizContextPtr &context)
-      : VizConfig(context),
+          const VizContextPtr &context,
+          const std::string &name)
+      : VizConfig(context, name),
         row_attr_id_(row_attr_id),
         col_attr_id_(col_attr_id),
         measure_attr_id_(measure_attr_id) {}

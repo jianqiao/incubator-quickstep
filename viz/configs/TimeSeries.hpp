@@ -48,8 +48,9 @@ class TimeSeries : public VizConfig {
              const std::string &time_format,
              const attribute_id group_attr_id,
              const attribute_id measure_attr_id,
-             const VizContextPtr &context)
-      : VizConfig(context),
+             const VizContextPtr &context,
+             const std::string &name)
+      : VizConfig(context, name),
         time_attr_id_(time_attr_id),
         time_format_(time_format),
         group_attr_id_(group_attr_id),

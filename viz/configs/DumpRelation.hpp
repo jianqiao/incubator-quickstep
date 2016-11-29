@@ -45,7 +45,7 @@ namespace viz {
 class DumpRelation : public VizConfig {
  public:
   DumpRelation(const VizContextPtr &context)
-      : VizConfig(context) {}
+      : VizConfig(context, "DumpRelation") {}
 
   ~DumpRelation() override {}
 

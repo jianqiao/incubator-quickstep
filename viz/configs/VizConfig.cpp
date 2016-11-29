@@ -42,8 +42,8 @@ namespace viz {
 
 using nlohmann::json;
 
-VizConfig::VizConfig(const VizContextPtr &context)
-    : context_(context) {
+VizConfig::VizConfig(const VizContextPtr &context, const std::string &name)
+    : context_(context), name_(name) {
   const VizAnalyzer *analyzer =
       context_->get<VizAnalyzer>("VizAnalyzer");
   relation_ = analyzer->getRelation();

@@ -45,8 +45,9 @@ class BarChart : public VizConfig {
  public:
   BarChart(const attribute_id dimension_attr_id,
            const std::vector<attribute_id> &measure_attr_ids,
-           const VizContextPtr &context)
-      : VizConfig(context),
+           const VizContextPtr &context,
+           const std::string &name)
+      : VizConfig(context, name),
         dimension_attr_id_(dimension_attr_id),
         measure_attr_ids_(measure_attr_ids) {}
 
