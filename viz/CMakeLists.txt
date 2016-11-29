@@ -77,6 +77,7 @@ target_link_libraries(quickstep_viz_VizHelper
                       quickstep_queryoptimizer_physical_Physical
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
+                      quickstep_viz_VizCounter
                       quickstep_viz_VizEngine
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_viz_VizLiteralHelper

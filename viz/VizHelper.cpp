@@ -29,6 +29,7 @@
 #include "query_optimizer/physical/Physical.hpp"
 #include "viz/VizAnalyzer.hpp"
 #include "viz/VizContext.hpp"
+#include "viz/VizCounter.hpp"
 #include "viz/VizEngine.hpp"
 
 #include "glog/logging.h"
@@ -74,6 +75,8 @@ void VizHelper::Visualize(const ParseStatement &parse_statement,
                                     main_thread_client_id,
                                     foreman_client_id,
                                     bus));
+  context_base->set("VizCounter",
+                    new VizCounter());
 
   VizEngine viz_engine(VizContextPtr(context_base.release()));
   viz_engine.execute();
