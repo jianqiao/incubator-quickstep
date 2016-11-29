@@ -20,13 +20,9 @@
 #ifndef QUICKSTEP_VIZ_RULES_ONE_DIMENSION_MULTI_MEASURES_HPP_
 #define QUICKSTEP_VIZ_RULES_ONE_DIMENSION_MULTI_MEASURES_HPP_
 
-#include "catalog/CatalogTypedefs.hpp"
 #include "utility/Macros.hpp"
-#include "viz/VizAnalyzer.hpp"
 #include "viz/VizContext.hpp"
-#include "viz/VizObject.hpp"
-#include "viz/configs/BarChart.hpp"
-#include "viz/configs/LineChart.hpp"
+#include "viz/rules/VizRule.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -42,29 +38,7 @@ class OneDimensionMultiMeasures : public VizRule {
 
   ~OneDimensionMultiMeasures() override {}
 
-  void execute() override {
-    const AttributeIdVector *dimensions =
-        context_->get<AttributeIdVector>("Dimensions");
-    CHECK_EQ(1uL, dimensions->getAttributeIds().size());
-
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
-
-    std::unique_ptr<VizContext> new_context(new VizContext(context_));
-    new_context->set("trace", new StringValue("OneDimensionMultiMeasures"));
-
-    const VizContextPtr new_context_ptr(new_context.release());
-
-    // Barchart
-    yield(new BarChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
-
-    // LineChart
-    yield(new LineChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
-  }
+  void execute() override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(OneDimensionMultiMeasures);

@@ -22,12 +22,8 @@
 
 #include "catalog/CatalogTypedefs.hpp"
 #include "utility/Macros.hpp"
-#include "viz/VizAnalyzer.hpp"
 #include "viz/VizContext.hpp"
-#include "viz/VizObject.hpp"
-#include "viz/configs/BarChart.hpp"
-#include "viz/configs/PieChart.hpp"
-#include "viz/configs/TimeSeries.hpp"
+#include "viz/rules/VizRule.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -43,44 +39,7 @@ class OneDimensionOneMeasure : public VizRule {
 
   ~OneDimensionOneMeasure() override {}
 
-  void execute() override {
-    const AttributeIdVector *dimensions =
-        context_->get<AttributeIdVector>("Dimensions");
-    CHECK_EQ(1uL, dimensions->getAttributeIds().size());
-
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
-    CHECK_EQ(1uL, measures->getAttributeIds().size());
-
-    std::unique_ptr<VizContext> new_context(new VizContext(context_));
-    new_context->set("trace", new StringValue("OneDimensionOneMeasure"));
-
-    const VizContextPtr new_context_ptr(new_context.release());
-
-    // Barchart
-    yield(new BarChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds(),
-                       new_context_ptr));
-
-    // PieChart
-    yield(new PieChart(dimensions->getAttributeIds().front(),
-                       measures->getAttributeIds().front(),
-                       new_context_ptr));
-
-    // Try TimeseriesChart
-    const VizAnalyzer *analyzer =
-        context_->get<VizAnalyzer>("VizAnalyzer");
-    const attribute_id dimension_attr_id = dimensions->getAttributeIds().front();
-
-    std::string time_format;
-    if (analyzer->isTime(dimension_attr_id, &time_format)) {
-      yield(new TimeSeries(dimension_attr_id,
-                           time_format,
-                           kInvalidAttributeID,
-                           measures->getAttributeIds().front(),
-                           new_context_ptr));
-    }
-  }
+  void execute() override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(OneDimensionOneMeasure);
