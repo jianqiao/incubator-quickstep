@@ -19,8 +19,12 @@
 
 #include "viz/rules/OneDimensionOneMeasure.hpp"
 
+#include <string>
+
 #include "viz/VizAnalyzer.hpp"
+#include "viz/VizCounter.hpp"
 #include "viz/configs/BarChart.hpp"
+#include "viz/configs/LineChart.hpp"
 #include "viz/configs/PieChart.hpp"
 #include "viz/configs/TimeSeries.hpp"
 #include "viz/rules/SplitValue.hpp"
@@ -40,6 +44,10 @@ void OneDimensionOneMeasure::execute() {
       context_->get<AttributeIdVector>("Measures");
   CHECK_EQ(1uL, measures->getAttributeIds().size());
 
+  const VizCounter *counter =
+      context_->get<VizCounter>("VizCounter");
+  std::string subgraph = "subgraph" + std::to_string(counter->getCounter());
+
   std::unique_ptr<VizContext> new_context(new VizContext(context_));
   new_context->set("trace", new StringValue("OneDimensionOneMeasure"));
   const VizContextPtr new_context_ptr(new_context.release());
@@ -47,12 +55,20 @@ void OneDimensionOneMeasure::execute() {
   // Barchart
   yield(new BarChart(dimensions->getAttributeIds().front(),
                      measures->getAttributeIds(),
-                     new_context_ptr));
+                     new_context_ptr,
+                     subgraph + "bar"));
+
+  // LineChart
+  yield(new LineChart(dimensions->getAttributeIds().front(),
+                     measures->getAttributeIds(),
+                     new_context_ptr,
+                     subgraph + "line"));
 
   // PieChart
   yield(new PieChart(dimensions->getAttributeIds().front(),
                      measures->getAttributeIds().front(),
-                     new_context_ptr));
+                     new_context_ptr,
+                     subgraph + "pie"));
 
   // Try TimeseriesChart
   const VizAnalyzer *analyzer =
@@ -64,7 +80,8 @@ void OneDimensionOneMeasure::execute() {
                          time_format,
                          kInvalidAttributeID,
                          measures->getAttributeIds().front(),
-                         new_context_ptr));
+                         new_context_ptr,
+                         subgraph + "time"));
   }
 
   derive(new SplitValue(new_context_ptr));
