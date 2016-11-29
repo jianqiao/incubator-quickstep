@@ -21,7 +21,6 @@
 
 #include <algorithm>
 
-#include "utility/Macros.hpp"
 #include "viz/VizLiteralHelper.hpp"
 #include "viz/VizStatisticsHelper.hpp"
 #include "viz/VizAnalyzer.hpp"
@@ -66,23 +65,6 @@ void SplitValue::execute() {
   }
 }
 
-void SplitValue::dispatchWithGrouping(const VizAnalyzer *analyzer,
-                                      const VizContextPtr new_context,
-                                      const std::size_t num_dimension_attrs,
-                                      const std::size_t num_measure_attrs) {
-  if (num_dimension_attrs == 1) {
-    if (num_measure_attrs == 1) {
-      derive(new OneDimensionOneMeasure(new_context));
-    } else {
-      derive(new OneDimensionMultiMeasures(new_context));
-    }
-  } else if(num_dimension_attrs == 2) {
-    if (num_measure_attrs == 1) {
-      derive(new TwoDimensionsOneMeasure(new_context));
-    }
-  }
-}
-
 bool SplitValue::checkInBoundary(const VizAnalyzer *analyzer,
                                  const AttributeIdVector *measures,
                                  std::vector<std::pair<double, attribute_id>>& literal) {
@@ -95,7 +77,7 @@ bool SplitValue::checkInBoundary(const VizAnalyzer *analyzer,
   // debug
   for(int i=0; i<literal.size(); i++)
     std::cout<<literal[i].first<<" "<<literal[i].second<<std::endl;
-  
+
   std::pair<double, attribute_id> maxx = *std::min_element(literal.begin(), literal.end());
   std::pair<double, attribute_id> minn = *std::max_element(literal.begin(), literal.end());
   // check if the max of max_values_ is 10 times the min of max_values, then need to split
@@ -119,7 +101,7 @@ void SplitValue::splitAttributes(std::vector<std::pair<double, attribute_id>> &l
       pos = iter;
     }
   }
-  
+
   if (pos != literal.end()) {
     std::vector<attribute_id> temp;
     for (std::vector<std::pair<double, attribute_id>>::const_iterator it = pos; it != literal.end(); ++it)

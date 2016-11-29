@@ -23,7 +23,7 @@
 #include <algorithm>
 
 #include "utility/Macros.hpp"
-#include "viz/rules/VizRule.hpp"
+#include "viz/rules/Grouping.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -34,22 +34,16 @@ class VizAnalyzer;
  *  @{
  */
 
-class SplitValue : public VizRule {
+class SplitValue : public Grouping {
  public:
   SplitValue(const VizContextPtr &context)
-      : VizRule(context) {}
+      : Grouping(context) {}
 
   ~SplitValue() override {}
 
   void execute() override;
 
  protected:
-
-  void dispatchWithGrouping(const VizAnalyzer *analyzer,
-                            const VizContextPtr new_context,
-                            const std::size_t num_dimension_attrs,
-                            const std::size_t num_measure_attrs);
-
 
   bool checkInBoundary(const VizAnalyzer *analyzer,
                        const AttributeIdVector *measures,

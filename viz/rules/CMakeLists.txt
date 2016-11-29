@@ -42,21 +42,17 @@ target_link_libraries(quickstep_viz_rules_Grouping
                       quickstep_viz_rules_OneDimensionOneMeasure
                       quickstep_viz_rules_TwoDimensionsOneMeasure)
 target_link_libraries(quickstep_viz_rules_OneDimensionMultiMeasures
-                      quickstep_catalog_CatalogTypedefs
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
-                      quickstep_viz_VizObject
                       quickstep_viz_configs_BarChart
                       quickstep_viz_configs_LineChart
                       quickstep_viz_rules_SplitValue
                       quickstep_viz_rules_VizRule)
 target_link_libraries(quickstep_viz_rules_OneDimensionOneMeasure
-                      quickstep_catalog_CatalogTypedefs
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
-                      quickstep_viz_VizObject
                       quickstep_viz_configs_BarChart
                       quickstep_viz_configs_PieChart
                       quickstep_viz_configs_TimeSeries
@@ -67,19 +63,18 @@ target_link_libraries(quickstep_viz_rules_SplitValue
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizLiteralHelper
                       quickstep_viz_VizStatisticsHelper
+                      quickstep_viz_rules_Grouping
                       quickstep_viz_rules_OneDimensionMultiMeasures
                       quickstep_viz_rules_OneDimensionOneMeasure
-                      quickstep_viz_rules_TwoDimensionsOneMeasure
-                      quickstep_viz_rules_VizRule)
+                      quickstep_viz_rules_TwoDimensionsOneMeasure)
 target_link_libraries(quickstep_viz_rules_TwoDimensionsOneMeasure
-                      quickstep_catalog_CatalogTypedefs
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
-                      quickstep_viz_VizObject
                       quickstep_viz_configs_HeatMap
                       quickstep_viz_configs_StackedAreaTimeSeries
                       quickstep_viz_configs_TimeSeries
+                      quickstep_viz_rules_SplitValue
                       quickstep_viz_rules_VizRule)
 target_link_libraries(quickstep_viz_rules_VizRule
                       quickstep_utility_Macros
