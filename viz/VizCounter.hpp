@@ -36,7 +36,11 @@ namespace viz {
 class VizCounter : public VizObject {
  public:
   VizCounter() : value_(0) {}
-  VizCOunter(const int v) : value_(v) {}
+  VizCounter(const int v) : value_(v) {}
+
+  std::string getName() const override {
+    return "VizCounter";
+  }
 
   void increaseCounter() {
     value_++;
