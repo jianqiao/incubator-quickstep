@@ -19,15 +19,10 @@
 
 #include "viz/rules/OneDimensionMultiMeasures.hpp"
 
-#include "catalog/CatalogTypedefs.hpp"
-#include "utility/Macros.hpp"
 #include "viz/VizAnalyzer.hpp"
-#include "viz/VizContext.hpp"
-#include "viz/VizObject.hpp"
 #include "viz/configs/BarChart.hpp"
 #include "viz/configs/LineChart.hpp"
 #include "viz/rules/SplitValue.hpp"
-#include "viz/rules/VizRule.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -44,7 +39,7 @@ void OneDimensionMultiMeasures::execute() {
 
   const AttributeIdVector *measures =
       context_->get<AttributeIdVector>("Measures");
-  
+
   std::unique_ptr<VizContext> new_context(new VizContext(context_));
   new_context->set("trace", new StringValue("OneDimensionMultiMeasures"));
   const VizContextPtr new_context_ptr(new_context.release());

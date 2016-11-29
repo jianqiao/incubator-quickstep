@@ -19,14 +19,11 @@
 
 #include "viz/rules/TwoDimensionsOneMeasure.hpp"
 
-#include "catalog/CatalogTypedefs.hpp"
-#include "utility/Macros.hpp"
 #include "viz/VizAnalyzer.hpp"
-#include "viz/VizContext.hpp"
-#include "viz/VizObject.hpp"
 #include "viz/configs/HeatMap.hpp"
 #include "viz/configs/StackedAreaTimeSeries.hpp"
 #include "viz/configs/TimeSeries.hpp"
+#include "viz/rules/SplitValue.hpp"
 
 namespace quickstep {
 namespace viz {
@@ -72,7 +69,7 @@ void TwoDimensionsOneMeasure::execute() {
                                       new_context_ptr));
     }
   }
-  
+
   // HeatMap
   for (std::size_t i = 0; i < 2uL; ++i) {
       yield(new HeatMap(dimension_attr_ids.at(i),
@@ -80,6 +77,8 @@ void TwoDimensionsOneMeasure::execute() {
                         measures->getAttributeIds().front(),
                         new_context_ptr));
   }
+
+  derive(new SplitValue(new_context_ptr));
 }
 
 

@@ -20,7 +20,6 @@
 #ifndef QUICKSTEP_VIZ_RULES_ONE_DIMENSION_ONE_MEASURE_HPP_
 #define QUICKSTEP_VIZ_RULES_ONE_DIMENSION_ONE_MEASURE_HPP_
 
-#include "catalog/CatalogTypedefs.hpp"
 #include "utility/Macros.hpp"
 #include "viz/VizContext.hpp"
 #include "viz/rules/VizRule.hpp"

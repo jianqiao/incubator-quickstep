@@ -19,16 +19,11 @@
 
 #include "viz/rules/OneDimensionOneMeasure.hpp"
 
-#include "catalog/CatalogTypedefs.hpp"
-#include "utility/Macros.hpp"
 #include "viz/VizAnalyzer.hpp"
-#include "viz/VizContext.hpp"
-#include "viz/VizObject.hpp"
 #include "viz/configs/BarChart.hpp"
 #include "viz/configs/PieChart.hpp"
 #include "viz/configs/TimeSeries.hpp"
 #include "viz/rules/SplitValue.hpp"
-#include "viz/rules/VizRule.hpp"
 
 namespace quickstep {
 namespace viz {
