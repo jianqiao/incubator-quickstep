@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "viz/VizCounter.hpp"
 #include "viz/VizLiteralHelper.hpp"
 #include "viz/VizStatisticsHelper.hpp"
 #include "viz/VizAnalyzer.hpp"
@@ -48,6 +49,11 @@ void SplitValue::execute() {
   if (checkInBoundary(analyzer, measures, literal))
     return;
 
+  // if values differ too much, need to split into subgraph
+  const VizCounter *counter =
+      context_->get<VizCounter>("VizCounter");
+  const int prev_counter = counter->getCounter();
+
   std::vector<std::vector<attribute_id>> split;
   splitAttributes(literal, split);
 
@@ -56,6 +62,8 @@ void SplitValue::execute() {
     new_context->set("trace", new StringValue("SplitValue"));
     new_context->set("Measures",
                      new AttributeIdVector(split[i]));
+    new_context->set("VizCounter",
+                     new VizCounter(prev_counter + 1));
     dispatchWithGrouping(analyzer,
                          VizContextPtr(new_context.release()),
                          dimensions->getAttributeIds().size(),

@@ -45,6 +45,7 @@ target_link_libraries(quickstep_viz_rules_OneDimensionMultiMeasures
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
+                      quickstep_viz_VizCounter
                       quickstep_viz_configs_BarChart
                       quickstep_viz_configs_LineChart
                       quickstep_viz_rules_SplitValue
@@ -53,7 +54,9 @@ target_link_libraries(quickstep_viz_rules_OneDimensionOneMeasure
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
+                      quickstep_viz_VizCounter
                       quickstep_viz_configs_BarChart
+                      quickstep_viz_configs_LineChart
                       quickstep_viz_configs_PieChart
                       quickstep_viz_configs_TimeSeries
                       quickstep_viz_rules_SplitValue
@@ -61,6 +64,7 @@ target_link_libraries(quickstep_viz_rules_OneDimensionOneMeasure
 target_link_libraries(quickstep_viz_rules_SplitValue
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
+                      quickstep_viz_VizCounter
                       quickstep_viz_VizLiteralHelper
                       quickstep_viz_VizStatisticsHelper
                       quickstep_viz_rules_Grouping)
@@ -68,6 +72,7 @@ target_link_libraries(quickstep_viz_rules_TwoDimensionsOneMeasure
                       quickstep_utility_Macros
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
+                      quickstep_viz_VizCounter
                       quickstep_viz_configs_HeatMap
                       quickstep_viz_configs_StackedAreaTimeSeries
                       quickstep_viz_configs_TimeSeries

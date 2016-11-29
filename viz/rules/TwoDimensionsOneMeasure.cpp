@@ -20,6 +20,7 @@
 #include "viz/rules/TwoDimensionsOneMeasure.hpp"
 
 #include "viz/VizAnalyzer.hpp"
+#include "viz/VizCounter.hpp"
 #include "viz/configs/HeatMap.hpp"
 #include "viz/configs/StackedAreaTimeSeries.hpp"
 #include "viz/configs/TimeSeries.hpp"
@@ -42,6 +43,10 @@ void TwoDimensionsOneMeasure::execute() {
       context_->get<AttributeIdVector>("Measures");
   CHECK_EQ(1uL, measures->getAttributeIds().size());
 
+  const VizCounter *counter =
+      context_->get<VizCounter>("VizCounter");
+  std::string subgraph = "subgraph" + std::to_string(counter->getCounter());
+
   std::unique_ptr<VizContext> new_context(new VizContext(context_));
   new_context->set("trace", new StringValue("TwoDimensionsOneMeasure"));
   const VizContextPtr new_context_ptr(new_context.release());
@@ -60,13 +65,15 @@ void TwoDimensionsOneMeasure::execute() {
                            time_format,
                            group_attr_id,
                            measures->getAttributeIds().front(),
-                           new_context_ptr));
+                           new_context_ptr,
+                           subgraph + "time"));
 
       yield(new StackedAreaTimeSeries(time_attr_id,
                                       time_format,
                                       group_attr_id,
                                       measures->getAttributeIds().front(),
-                                      new_context_ptr));
+                                      new_context_ptr,
+                                      subgraph + "stack"));
     }
   }
 
@@ -75,9 +82,11 @@ void TwoDimensionsOneMeasure::execute() {
       yield(new HeatMap(dimension_attr_ids.at(i),
                         dimension_attr_ids.at(1-i),
                         measures->getAttributeIds().front(),
-                        new_context_ptr));
+                        new_context_ptr,
+                        subgraph + "heat"));
   }
 
+  // apply split value
   derive(new SplitValue(new_context_ptr));
 }
 
