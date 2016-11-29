@@ -79,7 +79,7 @@ class Grouping : public VizRule {
     }
   }
 
- private:
+ protected:
   void dispatchWithGrouping(const VizAnalyzer *analyzer,
                             const VizContextPtr new_context,
                             const std::size_t num_dimension_attrs,
@@ -97,6 +97,7 @@ class Grouping : public VizRule {
     }
   }
 
+ private:
   DISALLOW_COPY_AND_ASSIGN(Grouping);
  };
 

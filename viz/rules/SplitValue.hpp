@@ -20,13 +20,15 @@
 #ifndef QUICKSTEP_VIZ_RULES_SPLIT_VALUE_HPP_
 #define QUICKSTEP_VIZ_RULES_SPLIT_VALUE_HPP_
 
+#include <algorithm>
+
 #include "utility/Macros.hpp"
-#include "viz/VizLiteralHelper.hpp"
-#include "viz/VizStatisticsHelper.hpp"
-#include "viz/VizAnalyzer.hpp"
+#include "viz/rules/VizRule.hpp"
 
 namespace quickstep {
 namespace viz {
+
+class VizAnalyzer;
 
 /** \addtogroup Viz
  *  @{
@@ -39,31 +41,26 @@ class SplitValue : public VizRule {
 
   ~SplitValue() override {}
 
-  void execute() override {
-    const VizAnalyzer *analyzer =
-        context_->get<VizAnalyzer>("VizAnalyzer");
-
-    const AttributeIdVector *measures =
-        context_->get<AttributeIdVector>("Measures");
-
-    std::vector<double> literal;
-    if (checkInBoundary(analyzer,measures, literal)){
-      return;
-    }
-
-  }
+  void execute() override;
 
  protected:
-  bool checkInBoundary(const VizAnalyzer *analyzer, const AttributeIdVector *measures, std::vector<double>& literal) {
-    // check if the maximum value does not differ too much
-    const RelationStatistics *stat = analyzer->getRelationStatistics();
-    for (const attribute_id column_id : measures->getAttributeIds()) {
-      literal.push_back(VizLiteralHelper::getLiteral(stat->max_values_[column_id]));
-    }
-    return true;
-  }
+
+  void dispatchWithGrouping(const VizAnalyzer *analyzer,
+                            const VizContextPtr new_context,
+                            const std::size_t num_dimension_attrs,
+                            const std::size_t num_measure_attrs);
+
+
+  bool checkInBoundary(const VizAnalyzer *analyzer,
+                       const AttributeIdVector *measures,
+                       std::vector<std::pair<double, attribute_id>>& literal);
+
+  void splitAttributes(std::vector<std::pair<double, attribute_id>> &literal,
+                       std::vector<std::vector<attribute_id>> &split);
 
  private:
+  // check if the max of max_values_ is kDiff times the min of max_values_, then need to split
+  static constexpr double kDiff = 10.0;
 
   DISALLOW_COPY_AND_ASSIGN(SplitValue);
  };
