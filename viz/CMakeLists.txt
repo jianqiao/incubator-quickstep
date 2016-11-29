@@ -21,6 +21,7 @@ add_subdirectory(rules)
 # Declare micro-libs:
 add_library(quickstep_viz_VizAnalyzer VizAnalyzer.cpp VizAnalyzer.hpp)
 add_library(quickstep_viz_VizContext VizContext.cpp VizContext.hpp)
+add_library(quickstep_viz_VizCounter ../empty_src.cpp VizCounter.hpp)
 add_library(quickstep_viz_VizEngine VizEngine.cpp VizEngine.hpp)
 add_library(quickstep_viz_VizHelper VizHelper.cpp VizHelper.hpp)
 add_library(quickstep_viz_VizLiteralHelper ../empty_src.cpp VizLiteralHelper.hpp)
@@ -53,6 +54,9 @@ target_link_libraries(quickstep_viz_VizAnalyzer
                       quickstep_viz_VizObject
                       quickstep_viz_VizStatisticsHelper)
 target_link_libraries(quickstep_viz_VizContext
+                      quickstep_utility_Macros
+                      quickstep_viz_VizObject)
+target_link_libraries(quickstep_viz_VizCounter
                       quickstep_utility_Macros
                       quickstep_viz_VizObject)
 target_link_libraries(quickstep_viz_VizEngine
