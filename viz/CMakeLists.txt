@@ -27,6 +27,7 @@ add_library(quickstep_viz_VizHelper VizHelper.cpp VizHelper.hpp)
 add_library(quickstep_viz_VizLiteralHelper ../empty_src.cpp VizLiteralHelper.hpp)
 add_library(quickstep_viz_VizObject VizObject.cpp VizObject.hpp)
 add_library(quickstep_viz_VizStatisticsHelper VizStatisticsHelper.cpp VizStatisticsHelper.hpp)
+add_library(quickstep_viz_VizSubgraphHelper ../empty_src.cpp VizSubgraphHelper.hpp)
 
 # Link dependencies:
 target_link_libraries(quickstep_viz_VizAnalyzer
@@ -101,3 +102,6 @@ target_link_libraries(quickstep_viz_VizStatisticsHelper
                       quickstep_storage_ValueAccessorUtil
                       quickstep_types_TypedValue
                       quickstep_utility_Macros)
+target_link_libraries(quickstep_viz_VizSubgraphHelper
+                      quickstep_utility_Macros
+                      quickstep_viz_configs_VizConfig)
