@@ -90,6 +90,14 @@ class TimeSeries : public VizConfig {
     return ret;
   }
 
+  int getNumDimension() override {
+    return 1;
+  }
+
+  int getNumMeasure() override {
+    return measure_attr_id_.size();
+  }
+
  private:
   const attribute_id time_attr_id_;
   const std::string time_format_;

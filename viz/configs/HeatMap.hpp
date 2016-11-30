@@ -70,6 +70,14 @@ class HeatMap : public VizConfig {
     return ret;
   }
 
+  int getNumDimension() override {
+    return 2;
+  }
+
+  int getNumMeasure() override {
+    return 1;
+  }
+
  private:
   const attribute_id row_attr_id_;
   const attribute_id col_attr_id_;

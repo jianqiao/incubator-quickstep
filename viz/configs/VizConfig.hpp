@@ -49,6 +49,10 @@ class VizConfig {
 
   virtual nlohmann::json toJSON() = 0;
 
+  virtual int getNumDimension() = 0;
+
+  virtual int getNumMeasure() = 0;
+
   const std::string& getName() const {
     return name_;
   }

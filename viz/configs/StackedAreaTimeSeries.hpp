@@ -144,6 +144,16 @@ class StackedAreaTimeSeries : public VizConfig {
     return ret;
   }
 
+  int getNumDimension() override {
+    if (group_attr_id_ == kInvalidAttributeID)
+      return 1;
+    return 2;
+  }
+
+  int getNumMeasure() override {
+    return 1;
+  }
+
  private:
   std::string RemoveQuotes(const std::string &input) {
     std::string ret;

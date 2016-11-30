@@ -71,6 +71,14 @@ class PieChart : public VizConfig {
     return ret;
   }
 
+  int getNumDimension() override {
+    return 1;
+  }
+
+  int getNumMeasure() override {
+    return 1;
+  }
+
  private:
   const attribute_id dimension_attr_id_;
   const attribute_id measure_attr_id_;
