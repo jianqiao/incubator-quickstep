@@ -56,21 +56,16 @@ void OneDimensionOneMeasure::execute() {
   yield(new BarChart(dimensions->getAttributeIds().front(),
                      measures->getAttributeIds(),
                      new_context_ptr,
-                     subgraph + "bar"));
+                     subgraph));
 
-  // LineChart
-  yield(new LineChart(dimensions->getAttributeIds().front(),
-                     measures->getAttributeIds(),
-                     new_context_ptr,
-                     subgraph + "line"));
 
   // PieChart
   yield(new PieChart(dimensions->getAttributeIds().front(),
                      measures->getAttributeIds().front(),
                      new_context_ptr,
-                     subgraph + "pie"));
+                     subgraph));
 
-  // Try TimeseriesChart
+  // Try Timeseries Chart first, if not time, use LineChart
   const VizAnalyzer *analyzer =
       context_->get<VizAnalyzer>("VizAnalyzer");
   const attribute_id dimension_attr_id = dimensions->getAttributeIds().front();
@@ -78,10 +73,14 @@ void OneDimensionOneMeasure::execute() {
   if (analyzer->isTime(dimension_attr_id, &time_format)) {
     yield(new TimeSeries(dimension_attr_id,
                          time_format,
-                         kInvalidAttributeID,
-                         measures->getAttributeIds().front(),
+                         measures->getAttributeIds(),
                          new_context_ptr,
-                         subgraph + "time"));
+                         subgraph));
+  } else {
+    yield(new LineChart(dimensions->getAttributeIds().front(),
+                        measures->getAttributeIds(),
+                        new_context_ptr,
+                        subgraph));
   }
 
   derive(new SplitValue(new_context_ptr));

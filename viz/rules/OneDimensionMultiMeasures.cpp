@@ -25,6 +25,7 @@
 #include "viz/VizCounter.hpp"
 #include "viz/configs/BarChart.hpp"
 #include "viz/configs/LineChart.hpp"
+#include "viz/configs/TimeSeries.hpp"
 #include "viz/rules/SplitValue.hpp"
 
 namespace quickstep {
@@ -55,13 +56,25 @@ void OneDimensionMultiMeasures::execute() {
   yield(new BarChart(dimensions->getAttributeIds().front(),
                      measures->getAttributeIds(),
                      new_context_ptr,
-                     subgraph + "bar"));
+                     subgraph));
 
-  // LineChart
-  yield(new LineChart(dimensions->getAttributeIds().front(),
-                      measures->getAttributeIds(),
-                      new_context_ptr,
-                      subgraph + "line"));
+  // try TimeSeries first, if not, use LineChart
+  const VizAnalyzer *analyzer =
+      context_->get<VizAnalyzer>("VizAnalyzer");
+  const attribute_id dimension_attr_id = dimensions->getAttributeIds().front();
+  std::string time_format;
+  if (analyzer->isTime(dimension_attr_id, &time_format)) {
+    yield(new TimeSeries(dimension_attr_id,
+                         time_format,
+                         measures->getAttributeIds(),
+                         new_context_ptr,
+                         subgraph));
+  } else {
+    yield(new LineChart(dimensions->getAttributeIds().front(),
+                        measures->getAttributeIds(),
+                        new_context_ptr,
+                        subgraph));
+  }
 
   // apply split value rule
   derive(new SplitValue(new_context_ptr));

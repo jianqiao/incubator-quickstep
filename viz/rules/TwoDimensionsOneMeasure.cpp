@@ -23,7 +23,7 @@
 #include "viz/VizCounter.hpp"
 #include "viz/configs/HeatMap.hpp"
 #include "viz/configs/StackedAreaTimeSeries.hpp"
-#include "viz/configs/TimeSeries.hpp"
+#include "viz/configs/GroupTimeSeries.hpp"
 #include "viz/rules/SplitValue.hpp"
 
 namespace quickstep {
@@ -61,19 +61,19 @@ void TwoDimensionsOneMeasure::execute() {
     const attribute_id group_attr_id = dimension_attr_ids.at(1-i);
     std::string time_format;
     if (analyzer->isTime(time_attr_id, &time_format)) {
-      yield(new TimeSeries(time_attr_id,
+      yield(new GroupTimeSeries(time_attr_id,
                            time_format,
                            group_attr_id,
                            measures->getAttributeIds().front(),
                            new_context_ptr,
-                           subgraph + "time"));
+                           subgraph));
 
       yield(new StackedAreaTimeSeries(time_attr_id,
                                       time_format,
                                       group_attr_id,
                                       measures->getAttributeIds().front(),
                                       new_context_ptr,
-                                      subgraph + "stack"));
+                                      subgraph));
     }
   }
 
@@ -83,7 +83,7 @@ void TwoDimensionsOneMeasure::execute() {
                         dimension_attr_ids.at(1-i),
                         measures->getAttributeIds().front(),
                         new_context_ptr,
-                        subgraph + "heat"));
+                        subgraph));
   }
 
   // apply split value
