@@ -44,7 +44,7 @@ class PieChart : public VizConfig {
            const attribute_id measure_attr_id,
            const VizContextPtr &context,
            const std::string &name)
-      : VizConfig(context, name),
+      : VizConfig(context, name + "pie"),
         dimension_attr_id_(dimension_attr_id),
         measure_attr_id_(measure_attr_id) {}
 

@@ -33,9 +33,6 @@
 
 namespace quickstep {
 
-class CatalogRelation;
-class StorageManager;
-
 namespace viz {
 
 /** \addtogroup Viz
@@ -46,14 +43,12 @@ class TimeSeries : public VizConfig {
  public:
   TimeSeries(const attribute_id time_attr_id,
              const std::string &time_format,
-             const attribute_id group_attr_id,
-             const attribute_id measure_attr_id,
+             const std::vector<attribute_id> measure_attr_id,
              const VizContextPtr &context,
              const std::string &name)
-      : VizConfig(context, name),
+      : VizConfig(context, name + "time"),
         time_attr_id_(time_attr_id),
         time_format_(time_format),
-        group_attr_id_(group_attr_id),
         measure_attr_id_(measure_attr_id) {}
 
   ~TimeSeries() override {}
@@ -61,10 +56,8 @@ class TimeSeries : public VizConfig {
   nlohmann::json toJSON() override {
     std::vector<attribute_id> all_attr_ids;
     all_attr_ids.emplace_back(time_attr_id_);
-    if (group_attr_id_ != kInvalidAttributeID) {
-      all_attr_ids.emplace_back(group_attr_id_);
-    }
-    all_attr_ids.emplace_back(measure_attr_id_);
+    for (const attribute_id id : measure_attr_id_)
+      all_attr_ids.emplace_back(id);
 
     nlohmann::json schema = copySchema(all_attr_ids);
     nlohmann::json columns = nlohmann::json::array();
@@ -75,45 +68,8 @@ class TimeSeries : public VizConfig {
 
     nlohmann::json data;
     data["xFormat"] = time_format_;
-    if (group_attr_id_ == kInvalidAttributeID) {
-      data["x"] = schema[0]["name"];
-      data["columns"] = columns;
-    } else {
-      const nlohmann::json &group_col = columns.at(1);
-      nlohmann::json &time_col = columns.at(0);
-      nlohmann::json &measure_col = columns.at(2);
-
-      std::map<nlohmann::json, std::vector<nlohmann::json>> time_groups;
-      std::map<nlohmann::json, std::vector<nlohmann::json>> measure_groups;
-      for (std::size_t i = 1; i < group_col.size(); ++i) {
-        const nlohmann::json &key = group_col.at(i);
-        time_groups[key].emplace_back(std::move(time_col.at(i)));
-        measure_groups[key].emplace_back(std::move(measure_col.at(i)));
-      }
-
-      nlohmann::json xs;
-      nlohmann::json pivot_columns = nlohmann::json::array();
-      for (auto &pair : time_groups) {
-        const auto &key = pair.first;
-        const std::string str_key_measure = RemoveQuotes(key.dump());
-        const std::string str_key_time = "_$x_" + str_key_measure;
-        xs[str_key_measure] = str_key_time;
-
-        auto &time_vec = pair.second;
-        auto &measure_vec = measure_groups.at(key);
-        nlohmann::json pivot_time_col = { str_key_time };
-        nlohmann::json pivot_measure_col = { str_key_measure };
-        for (std::size_t i = 0; i < time_vec.size(); ++i) {
-          pivot_time_col.push_back(std::move(time_vec.at(i)));
-          pivot_measure_col.push_back(std::move(measure_vec.at(i)));
-        }
-        pivot_columns.push_back(pivot_time_col);
-        pivot_columns.push_back(pivot_measure_col);
-      }
-
-      data["xs"] = xs;
-      data["columns"] = pivot_columns;
-    }
+    data["x"] = schema[0]["name"];
+    data["columns"] = columns;
 
     nlohmann::json x_axis;
     x_axis["label"]["text"] = schema[0]["name"];
@@ -135,21 +91,9 @@ class TimeSeries : public VizConfig {
   }
 
  private:
-  std::string RemoveQuotes(const std::string &input) {
-    std::string ret;
-    for (std::size_t i = 0; i < input.size(); ++i) {
-      const char c = input[i];
-      if (c != '"') {
-        ret.push_back(c);
-      }
-    }
-    return ret;
-  }
-
   const attribute_id time_attr_id_;
   const std::string time_format_;
-  const attribute_id group_attr_id_;
-  const attribute_id measure_attr_id_;
+  const std::vector<attribute_id> measure_attr_id_;
 
   DISALLOW_COPY_AND_ASSIGN(TimeSeries);
  };

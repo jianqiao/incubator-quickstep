@@ -49,6 +49,10 @@ class VizConfig {
 
   virtual nlohmann::json toJSON() = 0;
 
+  const std::string& getName() const {
+    return name_;
+  }
+
  protected:
   explicit VizConfig(const VizContextPtr &context, const std::string &name);
 
@@ -63,7 +67,7 @@ class VizConfig {
   const CatalogRelation *relation_;
   StorageManager *storage_manager_;
 
-  std::string name_;
+  const std::string name_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(VizConfig);

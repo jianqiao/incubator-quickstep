@@ -17,8 +17,8 @@
  * under the License.
  **/
 
-#ifndef QUICKSTEP_VIZ_CONFIGS_STACKED_AREA_TIME_SERIES_HPP_
-#define QUICKSTEP_VIZ_CONFIGS_STACKED_AREA_TIME_SERIES_HPP_
+#ifndef QUICKSTEP_VIZ_CONFIGS_GROUP_TIME_SERIES_HPP_
+#define QUICKSTEP_VIZ_CONFIGS_GROUP_TIME_SERIES_HPP_
 
 #include <string>
 #include <map>
@@ -42,21 +42,21 @@ namespace viz {
  *  @{
  */
 
-class StackedAreaTimeSeries : public VizConfig {
+class GroupTimeSeries : public VizConfig {
  public:
-  StackedAreaTimeSeries(const attribute_id time_attr_id,
-                        const std::string &time_format,
-                        const attribute_id group_attr_id,
-                        const attribute_id measure_attr_id,
-                        const VizContextPtr &context,
-                        const std::string &name)
-      : VizConfig(context, name + "stack"),
+  GroupTimeSeries(const attribute_id time_attr_id,
+             const std::string &time_format,
+             const attribute_id group_attr_id,
+             const attribute_id measure_attr_id,
+             const VizContextPtr &context,
+             const std::string &name)
+      : VizConfig(context, name + "grouptime"),
         time_attr_id_(time_attr_id),
         time_format_(time_format),
         group_attr_id_(group_attr_id),
         measure_attr_id_(measure_attr_id) {}
 
-  ~StackedAreaTimeSeries() override {}
+  ~GroupTimeSeries() override {}
 
   nlohmann::json toJSON() override {
     std::vector<attribute_id> all_attr_ids;
@@ -69,7 +69,7 @@ class StackedAreaTimeSeries : public VizConfig {
     nlohmann::json schema = copySchema(all_attr_ids);
     nlohmann::json columns = nlohmann::json::array();
     for (std::size_t i = 0; i < all_attr_ids.size(); ++i) {
-      const std::string &header = schema[i]["name"];
+      std::string header = schema[i]["name"];
       columns.push_back(copyColumn(all_attr_ids[i], &header));
     }
 
@@ -78,10 +78,6 @@ class StackedAreaTimeSeries : public VizConfig {
     if (group_attr_id_ == kInvalidAttributeID) {
       data["x"] = schema[0]["name"];
       data["columns"] = columns;
-
-      const std::string &m_name = schema[1]["name"];
-      data["types"][m_name] = "area";
-      data["groups"] = nlohmann::json::array({ nlohmann::json::array({ m_name }) });
     } else {
       const nlohmann::json &group_col = columns.at(1);
       nlohmann::json &time_col = columns.at(0);
@@ -97,15 +93,11 @@ class StackedAreaTimeSeries : public VizConfig {
 
       nlohmann::json xs;
       nlohmann::json pivot_columns = nlohmann::json::array();
-      nlohmann::json types;
-      nlohmann::json group = nlohmann::json::array();
       for (auto &pair : time_groups) {
         const auto &key = pair.first;
         const std::string str_key_measure = RemoveQuotes(key.dump());
         const std::string str_key_time = "_$x_" + str_key_measure;
         xs[str_key_measure] = str_key_time;
-        types[str_key_measure] = "area";
-        group.push_back(str_key_measure);
 
         auto &time_vec = pair.second;
         auto &measure_vec = measure_groups.at(key);
@@ -121,8 +113,6 @@ class StackedAreaTimeSeries : public VizConfig {
 
       data["xs"] = xs;
       data["columns"] = pivot_columns;
-      data["types"] = types;
-      data["groups"] = nlohmann::json::array({ group });
     }
 
     nlohmann::json x_axis;
@@ -136,7 +126,7 @@ class StackedAreaTimeSeries : public VizConfig {
     c3["axis"]["x"] = x_axis;
 
     nlohmann::json ret;
-    ret["type"] = "StackedAreaTimeSeries";
+    ret["type"] = "GroupTimeSeries";
     ret["trace"] = copyTrace();
     ret["schema"] = schema;
     ret["c3"] = c3;
@@ -161,7 +151,7 @@ class StackedAreaTimeSeries : public VizConfig {
   const attribute_id group_attr_id_;
   const attribute_id measure_attr_id_;
 
-  DISALLOW_COPY_AND_ASSIGN(StackedAreaTimeSeries);
+  DISALLOW_COPY_AND_ASSIGN(GroupTimeSeries);
  };
 
 /** @} */
@@ -169,4 +159,4 @@ class StackedAreaTimeSeries : public VizConfig {
 }  // namespace viz
 }  // namespace quickstep
 
-#endif  // QUICKSTEP_VIZ_CONFIGS_STACKED_AREA_TIME_SERIES_HPP_
+#endif  // QUICKSTEP_VIZ_CONFIGS_GROUP_TIME_SERIES_HPP_
