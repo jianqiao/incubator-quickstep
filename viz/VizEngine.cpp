@@ -21,6 +21,7 @@
 
 #include "utility/PlanVisualizer.hpp"
 #include "utility/ExecutionDAGVisualizer.hpp"
+#include "viz/VizSubgraphHelper.hpp"
 #include "viz/VizAnalyzer.hpp"
 #include "viz/configs/DumpRelation.hpp"
 #include "viz/rules/Grouping.hpp"
@@ -51,9 +52,13 @@ void VizEngine::execute() {
   }
 
   json viz = json::array();
+  // group subgraphs
+  VizSubgraphHelper::groupingSubgraphs(confs_, viz);
+  /*
   for (auto &conf : confs_) {
     viz.push_back(conf->toJSON());
   }
+  */
 
   const VizAnalyzer *analyzer = context_base_->get<VizAnalyzer>("VizAnalyzer");
   PlanVisualizer plan_visualizer;
