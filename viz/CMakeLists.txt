@@ -27,7 +27,7 @@ add_library(quickstep_viz_VizHelper VizHelper.cpp VizHelper.hpp)
 add_library(quickstep_viz_VizLiteralHelper ../empty_src.cpp VizLiteralHelper.hpp)
 add_library(quickstep_viz_VizObject VizObject.cpp VizObject.hpp)
 add_library(quickstep_viz_VizStatisticsHelper VizStatisticsHelper.cpp VizStatisticsHelper.hpp)
-add_library(quickstep_viz_VizSubgraphHelper ../empty_src.cpp VizSubgraphHelper.hpp)
+add_library(quickstep_viz_VizSubgraphHelper VizSubgraphHelper.cpp VizSubgraphHelper.hpp)
 
 # Link dependencies:
 target_link_libraries(quickstep_viz_VizAnalyzer
@@ -66,6 +66,7 @@ target_link_libraries(quickstep_viz_VizEngine
                       quickstep_utility_PlanVisualizer
                       quickstep_viz_VizAnalyzer
                       quickstep_viz_VizContext
+                      quickstep_viz_VizSubgraphHelper
                       quickstep_viz_configs_DumpRelation
                       quickstep_viz_configs_VizConfig
                       quickstep_viz_rules_VizRule

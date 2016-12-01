@@ -66,14 +66,14 @@ void TwoDimensionsOneMeasure::execute() {
                            group_attr_id,
                            measures->getAttributeIds().front(),
                            new_context_ptr,
-                           subgraph));
+                           subgraph + std::to_string(i)));
 
       yield(new StackedAreaTimeSeries(time_attr_id,
                                       time_format,
                                       group_attr_id,
                                       measures->getAttributeIds().front(),
                                       new_context_ptr,
-                                      subgraph));
+                                      subgraph + std::to_string(i)));
     }
   }
 
@@ -83,11 +83,11 @@ void TwoDimensionsOneMeasure::execute() {
                         dimension_attr_ids.at(1-i),
                         measures->getAttributeIds().front(),
                         new_context_ptr,
-                        subgraph));
+                        subgraph + std::to_string(i)));
   }
 
   // apply split value
-  derive(new SplitValue(new_context_ptr));
+  //derive(new SplitValue(new_context_ptr));
 }
 
 

@@ -83,7 +83,8 @@ void OneDimensionOneMeasure::execute() {
                         subgraph));
   }
 
-  derive(new SplitValue(new_context_ptr));
+  // apply split value rule
+  //derive(new SplitValue(new_context_ptr));
 }
 
 
