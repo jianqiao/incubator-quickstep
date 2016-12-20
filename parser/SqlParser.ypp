@@ -90,6 +90,7 @@ typedef struct YYLTYPE {
 #include "parser/ParseSample.hpp"
 #include "parser/ParseSelect.hpp"
 #include "parser/ParseSelectionClause.hpp"
+#include "parser/ParseSetOperation.hpp"
 #include "parser/ParseSimpleTableReference.hpp"
 #include "parser/ParseStatement.hpp"
 #include "parser/ParseString.hpp"
@@ -123,6 +124,7 @@ typedef void* yyscan_t;
   quickstep::PtrList<quickstep::ParseString> *string_list_;
 
   bool boolean_value_;
+  int* int_value_;
 
   quickstep::NumericParseLiteralValue *numeric_literal_value_;
   quickstep::ParseLiteralValue *literal_value_;
@@ -147,6 +149,8 @@ typedef void* yyscan_t;
   quickstep::ParseSelectionClause *selection_;
   quickstep::ParseSelectionItem *selection_item_;
   quickstep::ParseSelectionList *selection_list_;
+
+  quickstep::ParseSetOperation *set_operation_;
 
   quickstep::ParseTableReference *table_reference_;
   quickstep::PtrList<quickstep::ParseTableReference> *table_reference_list_;
@@ -175,12 +179,12 @@ typedef void* yyscan_t;
   quickstep::PtrVector<quickstep::ParseString> *command_argument_list_;
 
   quickstep::ParseStatement *statement_;
-  quickstep::ParseStatementSelect *select_statement_;
   quickstep::ParseStatementUpdate *update_statement_;
   quickstep::ParseStatementInsert *insert_statement_;
   quickstep::ParseStatementDelete *delete_statement_;
   quickstep::ParseStatementCopyFrom *copy_from_statement_;
   quickstep::ParseStatementCreateTable *create_table_statement_;
+  quickstep::ParseStatementSetOperation *set_operation_statement_;
   quickstep::ParsePartitionClause *partition_clause_;
   quickstep::ParseBlockProperties *block_properties_;
   quickstep::ParseStatementDropTable *drop_table_statement_;
@@ -242,6 +246,9 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %left '*' '/'
 %right UNARY_PLUS UNARY_MINUS
 %left '.'
+%left TOKEN_ALL
+%left TOKEN_UNION
+%left TOKEN_INTERSECT
 
 %token TOKEN_ADD;
 %token TOKEN_ALL;
@@ -298,6 +305,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %token TOKEN_INNER;
 %token TOKEN_INSERT;
 %token TOKEN_INTEGER;
+%token TOKEN_INTERSECT;
 %token TOKEN_INTERVAL;
 %token TOKEN_INTO;
 %token TOKEN_JOIN;
@@ -345,6 +353,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %token TOKEN_TRUE;
 %token TOKEN_TUPLESAMPLE;
 %token TOKEN_UNBOUNDED;
+%token TOKEN_UNION;
 %token TOKEN_UNIQUE;
 %token TOKEN_UPDATE;
 %token TOKEN_USING;
@@ -485,11 +494,15 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
   sql_statement
   alter_table_statement
 
-%type <select_statement_>
-  select_statement
-
 %type <select_query_>
   select_query
+
+%type <set_operation_statement_>
+  set_operation_statement
+
+%type <set_operation_>
+  set_operation_union
+  set_operation_intersect
 
 %type <update_statement_>
   update_statement
@@ -603,9 +616,10 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %type <command_argument_list_>
   command_argument_list
 
+%type <int_value_>
+  opt_all_distinct
+
 /*
-%type <int_val>
-  opt_all_distinct      // unimplemented
   table_constraint_def  // unimplemented
   table_constraint_def_commalist        // unimplemented
   opt_table_constraint_def_commalist    // unimplemented
@@ -676,7 +690,7 @@ sql_statement:
   | quit_statement {
     $$ = $1;
   }
-  | select_statement {
+  | set_operation_statement {
     $$ = $1;
   }
   | update_statement {
@@ -1148,13 +1162,14 @@ assignment_item:
     $$ = new quickstep::ParseAssignment(@1.first_line, @1.first_column, $1, $3);
   };
 
-/* Select Queries */
-select_statement:
-  select_query opt_priority_clause {
-    $$ = new quickstep::ParseStatementSelect(@1.first_line, @1.first_column, $1, nullptr, $2);
+/* Set Operation Queries */
+/* Select Queries are included here*/
+set_operation_statement:
+  set_operation_union opt_priority_clause {
+    $$ = new quickstep::ParseStatementSetOperation(@1.first_line, @1.first_column, $1, nullptr, $2);
   }
-  | with_clause select_query opt_priority_clause {
-    $$ = new quickstep::ParseStatementSelect(@1.first_line, @1.first_column, $2, $1, $3);
+  | with_clause set_operation_union opt_priority_clause {
+    $$ = new quickstep::ParseStatementSetOperation(@1.first_line, @1.first_column, $2, $1, $3);
   };
 
 opt_priority_clause:
@@ -1200,23 +1215,61 @@ with_list_element:
     $$->set_table_reference_signature($1);
   };
 
+set_operation_union:
+  set_operation_union TOKEN_UNION opt_all_distinct set_operation_intersect {
+    if ($1->getOperationType() == quickstep::ParseSetOperation::kUnion && (*$3 == 0 || *$3 == -1)) {
+      $$ = $1;
+    } else if ($1->getOperationType() == quickstep::ParseSetOperation::kUnionAll && (*$3 == 1)) {
+      $$ = $1;
+    } else {
+      if (*$3 == 1) {
+        $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kUnionAll);
+      } else {
+        $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kUnion);
+      }
+      $$->addOperand($1);
+    }
+    $$->addOperand($4);
+  }
+  | set_operation_intersect {
+    $$ = $1;
+  }
+
+set_operation_intersect:
+  set_operation_intersect TOKEN_INTERSECT select_query {
+    if ($1->getOperationType() == quickstep::ParseSetOperation::kIntersect) {
+      $$ = $1;
+    } else {
+      $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
+      $$->addOperand($1);
+    }
+    $$->addOperand($3);
+  }
+  | select_query {
+    $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kSingle);
+    $$->addOperand($1);
+  }
+  /*
+  | '(' set_operation_union ')' {
+    $$ = $2;
+  }
+  */
+
 select_query:
   TOKEN_SELECT opt_all_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
       opt_order_by_clause opt_limit_clause opt_window_clause {
     $$ = new quickstep::ParseSelect(@1.first_line, @1.first_column, $3, $4, $5, $6, $7, $8, $9, $10);
-  };
+  }
 
 opt_all_distinct:
   {
-    /* $$ = nullptr; */
+    $$ = new int(0);
   }
   | TOKEN_ALL {
-    NotSupported(&@1, yyscanner, "ALL in selection");
-    YYERROR;
+    $$ = new int(1);
   }
   | TOKEN_DISTINCT {
-    NotSupported(&@1, yyscanner, "DISTINCT in selection");
-    YYERROR;
+    $$ = new int(-1);
   };
 
 selection:
@@ -1254,7 +1307,7 @@ from_clause:
   };
 
 subquery_expression:
-  '(' select_query ')' {
+  '(' set_operation_union ')' {
     $$ = new quickstep::ParseSubqueryExpression(@1.first_line, @1.first_column, $2);
   };
 
