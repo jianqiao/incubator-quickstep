@@ -46,7 +46,7 @@ class ParseSubqueryExpression : public ParseExpression {
    *
    * @param line_number The line number of the beginning of the subquery expression.
    * @param column_number The column number of the beginning of the subquery expression.
-   * @param query The SELECT subquery.
+   * @param set_operation The SET OPERATION subquery.
    */
   ParseSubqueryExpression(const int line_number,
                           const int column_number,
@@ -63,7 +63,7 @@ class ParseSubqueryExpression : public ParseExpression {
   }
 
   /**
-   * @return The SELECT subquery.
+   * @return The SET OPERATION subquery.
    */
   const ParseSetOperation* set_operation() const { return set_operation_.get(); }
 

@@ -259,7 +259,6 @@ target_link_libraries(quickstep_parser_ParseSelectionClause
                       quickstep_utility_Macros
                       quickstep_utility_PtrList)
 target_link_libraries(quickstep_parser_ParseSetOperation
-                      quickstep_parser_ParseSelect
                       quickstep_parser_ParseTreeNode
                       quickstep_utility_Macros
                       quickstep_utility_PtrList)

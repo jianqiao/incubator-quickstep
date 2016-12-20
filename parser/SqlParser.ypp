@@ -1163,7 +1163,7 @@ assignment_item:
   };
 
 /* Set Operation Queries */
-/* Select Queries are included here*/
+/* Select Queries are now included in set operations */
 set_operation_statement:
   set_operation_union opt_priority_clause {
     $$ = new quickstep::ParseStatementSetOperation(@1.first_line, @1.first_column, $1, nullptr, $2);
@@ -1243,13 +1243,16 @@ set_operation_intersect:
       $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
       $$->addOperand($1);
     }
-    $$->addOperand($3);
+    quickstep::ParseSetOperation* temp = new quickstep::ParseSetOperation(@3.first_line, @3.first_column, quickstep::ParseSetOperation::kSingle);
+    temp->addOperand($3);
+    $$->addOperand(temp);
   }
   | select_query {
     $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kSingle);
     $$->addOperand($1);
   }
   /*
+    currently does not spport this one, because it has reduce/reduce conflicts with subquery_expression
   | '(' set_operation_union ')' {
     $$ = $2;
   }

@@ -22,7 +22,6 @@
 
 #include <string>
 
-#include "parser/ParseSelect.hpp"
 #include "parser/ParseTreeNode.hpp"
 #include "utility/Macros.hpp"
 #include "utility/PtrList.hpp"
