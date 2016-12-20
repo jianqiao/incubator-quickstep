@@ -366,7 +366,8 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
       }
       break;
     }
-    case ParseStatement::kSelect: {
+    case ParseStatement::kSetOperation: {
+      /*
       const ParseStatementSelect &select_statement =
           static_cast<const ParseStatementSelect&>(parse_query);
       if (select_statement.with_clause() != nullptr) {
@@ -374,9 +375,9 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
       }
       logical_plan_ =
           resolveSelect(*select_statement.select_query(),
-                        "" /* select_name */,
-                        nullptr /* No Type hints */,
-                        nullptr /* parent_resolver */);
+                        "",
+                        nullptr ,
+                        nullptr );
       if (select_statement.with_clause() != nullptr) {
         // Report an error if there is a WITH query that is not actually used.
         if (!with_queries_info_.unreferenced_query_indexes.empty()) {
@@ -389,6 +390,7 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
               << " is defined but not used";
         }
       }
+      */
       break;
     }
     case ParseStatement::kUpdate:
@@ -1295,13 +1297,17 @@ L::LogicalPtr Resolver::resolveSelect(
 }
 
 E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
+
     const ParseSubqueryExpression &parse_subquery_expression,
     const std::vector<const Type*> *type_hints,
     ExpressionResolutionInfo *expression_resolution_info,
     const bool has_single_column) {
-  L::LogicalPtr logical_subquery =
+
+  L::LogicalPtr logical_subquery;
+  /*
+   * =
       resolveSelect(*parse_subquery_expression.query(),
-                    "" /* select_name */,
+                    "" select_name,
                     type_hints,
                     &expression_resolution_info->name_resolver);
 
@@ -1315,7 +1321,7 @@ E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
   if (!context_->has_nested_queries()) {
     context_->set_has_nested_queries();
   }
-
+  */
   return E::SubqueryExpression::Create(logical_subquery);
 }
 
@@ -1558,11 +1564,12 @@ L::LogicalPtr Resolver::resolveTableReference(const ParseTableReference &table_r
       DCHECK(reference_signature->table_alias() != nullptr);
 
       reference_alias = reference_signature->table_alias();
+      /*
       logical_plan = resolveSelect(
           *static_cast<const ParseSubqueryTableReference&>(table_reference).subquery_expr()->query(),
           reference_alias->value(),
-          nullptr /* No Type hints */,
-          nullptr /* parent_resolver */);
+          nullptr  No Type hints ,
+          nullptr  parent_resolver );
 
       if (reference_signature->column_aliases() != nullptr) {
         logical_plan = RenameOutputColumns(logical_plan, *reference_signature);
@@ -1570,6 +1577,7 @@ L::LogicalPtr Resolver::resolveTableReference(const ParseTableReference &table_r
 
       name_resolver->addRelation(reference_alias, logical_plan);
       break;
+      */
     }
     case ParseTableReference::kJoinedTableReference: {
       NameResolver joined_table_name_resolver;

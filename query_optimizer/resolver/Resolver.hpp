@@ -61,7 +61,6 @@ class ParseStatementDelete;
 class ParseStatementDropTable;
 class ParseStatementInsertSelection;
 class ParseStatementInsertTuple;
-class ParseStatementSelect;
 class ParseStatementUpdate;
 class ParseString;
 class ParseSubqueryExpression;
