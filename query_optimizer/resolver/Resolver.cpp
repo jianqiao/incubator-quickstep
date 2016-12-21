@@ -106,6 +106,7 @@
 #include "query_optimizer/logical/TableGenerator.hpp"
 #include "query_optimizer/logical/TableReference.hpp"
 #include "query_optimizer/logical/TopLevelPlan.hpp"
+#include "query_optimizer/logical/SetOperation.hpp"
 #include "query_optimizer/logical/UpdateTable.hpp"
 #include "query_optimizer/logical/WindowAggregate.hpp"
 #include "query_optimizer/resolver/NameResolver.hpp"
@@ -367,30 +368,28 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
       break;
     }
     case ParseStatement::kSetOperation: {
-      /*
-      const ParseStatementSelect &select_statement =
-          static_cast<const ParseStatementSelect&>(parse_query);
-      if (select_statement.with_clause() != nullptr) {
-        resolveWithClause(*select_statement.with_clause());
+      const ParseStatementSetOperation &set_operation_statement =
+          static_cast<const ParseStatementSetOperation&>(parse_query);
+      if (set_operation_statement.with_clause() != nullptr) {
+        resolveWithClause(*set_operation_statement.with_clause());
       }
       logical_plan_ =
-          resolveSelect(*select_statement.select_query(),
-                        "",
-                        nullptr ,
-                        nullptr );
-      if (select_statement.with_clause() != nullptr) {
+          resolveSetOperation(*set_operation_statement.set_operation_query(),
+                              "", /* set opeartion name */
+                              nullptr, /* type hints */
+                              nullptr /* parent resolver*/);
+      if (set_operation_statement.with_clause() != nullptr) {
         // Report an error if there is a WITH query that is not actually used.
         if (!with_queries_info_.unreferenced_query_indexes.empty()) {
           int unreferenced_with_query_index = *with_queries_info_.unreferenced_query_indexes.begin();
           const ParseSubqueryTableReference &unreferenced_with_query =
-              (*select_statement.with_clause())[unreferenced_with_query_index];
+              (*set_operation_statement.with_clause())[unreferenced_with_query_index];
           THROW_SQL_ERROR_AT(&unreferenced_with_query)
               << "WITH query "
               << unreferenced_with_query.table_reference_signature()->table_alias()->value()
               << " is defined but not used";
         }
       }
-      */
       break;
     }
     case ParseStatement::kUpdate:
@@ -1296,8 +1295,115 @@ L::LogicalPtr Resolver::resolveSelect(
   return logical_plan;
 }
 
-E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
+L::LogicalPtr Resolver::resolveSetOperations(
+    const ParseSetOperation &parse_set_operations,
+    const std::vector<const Type*> *type_hints,
+    const NameResolver *parent_resolver) {
+  const PtrList<ParseTreeNode> &operands =
+    parse_set_operations.operands();
+  DCHECK_GT(operands.size(), 1);
+  std::vector<L::LogicalPtr> resolved_operations;
 
+  // resolve the first operation, and get the output attributes
+  PtrListConstIterator iter = operands.begin();
+  const ParseSetOperation &operation =
+    static_cast<const ParseSetOperation&>(*iter);
+  L::LogicalPtr operation_logical =
+    resolveSetOperation(operation, type_hints, parent_resolver);
+  const std::vector<E::AttributeReferencePtr> operation_attributes =
+    operation_logic->getOutputAttributes();
+  resolved_operations.push_back(operation_logical);
+  // TODO(Tianrun)
+  // generate new type_hints using operation_attributes?
+
+  // resolve the rest operations, and check the output attributes
+  for (; iter != operands.end(); ++iter) {
+    const ParseSetOperation &current_operation =
+      static_cast<const ParseSetOperation&>(*iter);
+    L::LogicalPtr current_logical =
+      resolveSetOperation(current_operation, type_hints, parent_resolver);
+    const std::vector<E::AttributeReferencePtr> current_attributes =
+      current_logical->getOutputAttributes();
+
+    // check output attributes size
+    if (current_attributes.size() != operation_attributes.size()) {
+      THROW_SQL_ERROR()
+        << "Can not perform " << ParseSetOperation.getName()
+        << "opeartion between "<< current_attributes.size()
+        << "and "<<operation_attributes.size()
+        << "columns";
+    }
+
+    // check type details
+    // TODO(Tianrun)
+    // currently does not support type cast
+    for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
+         aid < operation_attributes.size();
+        ++aid) {
+      const Type& operation_type = operation_attributes[aid]->getValueType();
+      const Type& current_type = current_attributes[aid]->getValueType();
+      if (!operation_type.equals(current_type)) {
+        THROW_SQL_ERROR()
+          << "Type is different between "
+          << operation_attributes[aid]->attribute_name()
+          << " and " << current_attributes[aid]->attribute_name();
+      }
+    }
+    resolved_operations.push_back(current_logical);
+  }
+
+  std::vector<E::NamedExpressionPtr> cast_expressions;
+  for (std::vector<AttributeReferencePtr>::size_type aid = 0;
+       aid < operation_attributes.size();
+       ++aid) {
+    cast_expressions.emplace_back(operation_attributes[aid]);
+  }
+
+  // TODO(Tianrun)
+  // Set operation types exist in both Parser and Logical level
+  // merge them into one?
+  L::LogicalPtr set_operation_logical;
+  switch (parse_set_operations.getStatementType()) {
+    case ParseSetOperation::kIntersect: {
+      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kIntersect);
+    }
+    case ParseSetOperation::kUnion: {
+      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnion);
+    }
+    case ParseSetOperation::kUnionAll: {
+      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnionAll);
+    }
+  }
+  return L::Project::Create(set_operation_logical, cast_expressions);
+}
+
+L::LogicalPtr Resolver::resolveSetOperation(
+    const ParseSetOperation &set_operation_query,
+    const std::vector<const Type*> *type_hints,
+    const NameResolver *parent_resolver) {
+  switch (set_operation_query.getStatementType()) {
+    case ParseSetOperation::kIntersect:
+    case ParseSetOperation::kUnion:
+    case ParseSetOperation::kUnionAll: {
+      return resolveSetOperations(set_operation_query,
+                                  type_hints,
+                                  parent_resolver);
+    }
+    case ParseSetOperation::kSingle: {
+      DCHECK_EQ(set_operation_query.operands().size(), 1u);
+      const ParseSelect &select_query =
+        static_cast<const ParseSelect&>(*set_operation_query.operands().begin());
+      return resolveSelect(select_query,
+                          "" /* select_name */,
+                          type_hints,
+                          parent_resolver);
+    }
+    default:
+      LOG(fatal) << "Unknown set operation" << set_operation_query.toString();
+  }
+}
+
+E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
     const ParseSubqueryExpression &parse_subquery_expression,
     const std::vector<const Type*> *type_hints,
     ExpressionResolutionInfo *expression_resolution_info,
