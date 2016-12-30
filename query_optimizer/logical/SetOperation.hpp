@@ -20,7 +20,7 @@
 #ifndef QUICKSTEP_QUERY_OPTIMIZER_LOGICAL_SETOPERATION_HPP_
 #define QUICKSTEP_QUERY_OPTIMIZER_LOGICAL_SETOPERATION_HPP_
 
-#include <memory>
+#include "query_optimizer/OptimizerTree.hpp"
 #include "query_optimizer/logical/Logical.hpp"
 #include "query_optimizer/logical/LogicalType.hpp"
 #include "utility/Macros.hpp"
@@ -71,6 +71,18 @@ class SetOperation : public Logical {
     }
   }
 
+  // Set operator requires all operands have the same output attribute (maybe by cast)
+  // So the output attribute of first operand is the output attribute of all the operands
+  std::vector<expressions::AttributeReferencePtr> getOutputAttributes() const override {
+    return operands_.front().getOutputAttributes();
+  }
+
+  // TODO(Tianrun)
+  // Does this need to remove the duplicate?
+  std::vector<expression::AttributeReferencePtr> getReferencedAttributes() const override {
+
+  }
+
   SetOperationType getSetOperationType() const {
     return set_operation_type_;
   }
@@ -81,6 +93,21 @@ class SetOperation : public Logical {
   }
 
  protected:
+
+  void getFieldStringItems(
+      std::vector<std::string> *inline_field_names,
+      std::vector<std::string> *inline_field_values,
+      std::vector<std::string> *non_container_child_field_names,
+      std::vector<OptimizerTreeBaseNodePtr> *non_container_child_fields,
+      std::vector<std::string> *container_child_field_names,
+      std::vector<std::vector<OptimizerTreeBaseNodePtr>> *container_child_fields) const override {
+    inline_field_names->push_back("set_operation_type");
+    inline_field_values->push_back(getName());
+
+    container_child_field_names->push_back("operands");
+    container_child_fields->push_back(
+          CastSharedPtrVector<OptimizerTreeBase>(operands_));
+  }
 
  private:
 

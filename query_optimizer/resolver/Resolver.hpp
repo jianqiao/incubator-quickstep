@@ -50,6 +50,7 @@ class ParsePredicate;
 class ParseSearchedCaseExpression;
 class ParseSelect;
 class ParseSelectionClause;
+class ParseSetOperation;
 class ParseSimpleCaseExpression;
 class ParseSimpleTableReference;
 class ParseSubqueryTableReference;
@@ -61,6 +62,7 @@ class ParseStatementDelete;
 class ParseStatementDropTable;
 class ParseStatementInsertSelection;
 class ParseStatementInsertTuple;
+class ParseStatementSetOperation;
 class ParseStatementUpdate;
 class ParseString;
 class ParseSubqueryExpression;
@@ -179,6 +181,22 @@ class Resolver {
   logical::LogicalPtr resolveSelect(
       const ParseSelect &select_statement,
       const std::string &select_name,
+      const std::vector<const Type*> *type_hints,
+      const NameResolver *parent_resolver);
+
+  /**
+   * @brief Resolves multiple set operations at the same level
+   */
+  logical::LogicalPtr resolveSetOperations(
+      const ParseSetOperation &parse_set_operations,
+      const std::vector<const Type*> *type_hints,
+      const NameResolver *parent_resolver);
+
+  /**
+   * @brief Resolves a SET OPERATION and returns a logical plan
+   */
+  logical::LogicalPtr resolveSetOperation(
+      const ParseSetOperation &set_operation_query,
       const std::vector<const Type*> *type_hints,
       const NameResolver *parent_resolver);
 

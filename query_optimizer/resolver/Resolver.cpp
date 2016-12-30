@@ -1366,13 +1366,18 @@ L::LogicalPtr Resolver::resolveSetOperations(
   switch (parse_set_operations.getStatementType()) {
     case ParseSetOperation::kIntersect: {
       set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kIntersect);
+      break;
     }
     case ParseSetOperation::kUnion: {
       set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnion);
+      break;
     }
     case ParseSetOperation::kUnionAll: {
       set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnionAll);
+      break;
     }
+    default:
+      LOG(FATAL) << "Unknown operation: " << parse_set_operations.toString();
   }
   return L::Project::Create(set_operation_logical, cast_expressions);
 }
@@ -1399,7 +1404,7 @@ L::LogicalPtr Resolver::resolveSetOperation(
                           parent_resolver);
     }
     default:
-      LOG(fatal) << "Unknown set operation" << set_operation_query.toString();
+      LOG(FATAL) << "Unknown set operation: " << set_operation_query.toString();
   }
 }
 
