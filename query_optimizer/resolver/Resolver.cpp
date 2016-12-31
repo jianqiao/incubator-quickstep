@@ -375,7 +375,6 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
       }
       logical_plan_ =
           resolveSetOperation(*set_operation_statement.set_operation_query(),
-                              "", /* set opeartion name */
                               nullptr, /* type hints */
                               nullptr /* parent resolver*/);
       if (set_operation_statement.with_clause() != nullptr) {
@@ -1305,18 +1304,19 @@ L::LogicalPtr Resolver::resolveSetOperations(
   std::vector<L::LogicalPtr> resolved_operations;
 
   // resolve the first operation, and get the output attributes
-  PtrListConstIterator iter = operands.begin();
+  PtrList<ParseTreeNode>::PtrListConstIterator iter = operands.begin();
   const ParseSetOperation &operation =
     static_cast<const ParseSetOperation&>(*iter);
   L::LogicalPtr operation_logical =
     resolveSetOperation(operation, type_hints, parent_resolver);
   const std::vector<E::AttributeReferencePtr> operation_attributes =
-    operation_logic->getOutputAttributes();
+    operation_logical->getOutputAttributes();
   resolved_operations.push_back(operation_logical);
   // TODO(Tianrun)
   // generate new type_hints using operation_attributes?
 
   // resolve the rest operations, and check the output attributes
+  ++iter;
   for (; iter != operands.end(); ++iter) {
     const ParseSetOperation &current_operation =
       static_cast<const ParseSetOperation&>(*iter);
@@ -1328,9 +1328,9 @@ L::LogicalPtr Resolver::resolveSetOperations(
     // check output attributes size
     if (current_attributes.size() != operation_attributes.size()) {
       THROW_SQL_ERROR()
-        << "Can not perform " << ParseSetOperation.getName()
-        << "opeartion between "<< current_attributes.size()
-        << "and "<<operation_attributes.size()
+        << "Can not perform " << current_operation.getName()
+        << "opeartion between "<< std::to_string(current_attributes.size())
+        << "and "<<std::to_string(operation_attributes.size())
         << "columns";
     }
 
@@ -1353,7 +1353,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
   }
 
   std::vector<E::NamedExpressionPtr> cast_expressions;
-  for (std::vector<AttributeReferencePtr>::size_type aid = 0;
+  for (std::vector<E::AttributeReferencePtr>::size_type aid = 0;
        aid < operation_attributes.size();
        ++aid) {
     cast_expressions.emplace_back(operation_attributes[aid]);
@@ -1363,7 +1363,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
   // Set operation types exist in both Parser and Logical level
   // merge them into one?
   L::LogicalPtr set_operation_logical;
-  switch (parse_set_operations.getStatementType()) {
+  switch (parse_set_operations.getOperationType()) {
     case ParseSetOperation::kIntersect: {
       set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kIntersect);
       break;
@@ -1386,7 +1386,7 @@ L::LogicalPtr Resolver::resolveSetOperation(
     const ParseSetOperation &set_operation_query,
     const std::vector<const Type*> *type_hints,
     const NameResolver *parent_resolver) {
-  switch (set_operation_query.getStatementType()) {
+  switch (set_operation_query.getOperationType()) {
     case ParseSetOperation::kIntersect:
     case ParseSetOperation::kUnion:
     case ParseSetOperation::kUnionAll: {

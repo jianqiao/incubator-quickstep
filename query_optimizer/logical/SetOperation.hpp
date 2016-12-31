@@ -21,6 +21,7 @@
 #define QUICKSTEP_QUERY_OPTIMIZER_LOGICAL_SETOPERATION_HPP_
 
 #include "query_optimizer/OptimizerTree.hpp"
+#include "query_optimizer/expressions/AttributeReference.hpp"
 #include "query_optimizer/logical/Logical.hpp"
 #include "query_optimizer/logical/LogicalType.hpp"
 #include "utility/Macros.hpp"
@@ -74,13 +75,26 @@ class SetOperation : public Logical {
   // Set operator requires all operands have the same output attribute (maybe by cast)
   // So the output attribute of first operand is the output attribute of all the operands
   std::vector<expressions::AttributeReferencePtr> getOutputAttributes() const override {
-    return operands_.front().getOutputAttributes();
+    return operands_.front()->getOutputAttributes();
   }
 
   // TODO(Tianrun)
   // Does this need to remove the duplicate?
-  std::vector<expression::AttributeReferencePtr> getReferencedAttributes() const override {
+  std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {
+    std::vector<expressions::AttributeReferencePtr> referenced_attributes;
+    for (const auto &operand : operands_) {
+      const std::vector<expressions::AttributeReferencePtr> reference = operand->getReferencedAttributes();
+      referenced_attributes.insert(referenced_attributes.end(),
+                                   reference.begin(),
+                                   reference.end());
+    }
+    return referenced_attributes;
+  }
 
+  LogicalPtr copyWithNewChildren(
+      const std::vector<LogicalPtr> &new_children) const override {
+    DCHECK_EQ(new_children.size(), children().size());
+    return SetOperation::Create(new_children, set_operation_type_);
   }
 
   SetOperationType getSetOperationType() const {
@@ -118,6 +132,7 @@ class SetOperation : public Logical {
     : set_operation_type_(set_operation_type) {
       for (const LogicalPtr& operand : operands) {
         operands_.push_back(operand);
+        addChild(operand);
       }
   }
 
