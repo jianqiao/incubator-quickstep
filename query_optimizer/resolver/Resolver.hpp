@@ -189,6 +189,7 @@ class Resolver {
    */
   logical::LogicalPtr resolveSetOperations(
       const ParseSetOperation &parse_set_operations,
+      const std::string &set_operation_name,
       const std::vector<const Type*> *type_hints,
       const NameResolver *parent_resolver);
 
@@ -197,6 +198,7 @@ class Resolver {
    */
   logical::LogicalPtr resolveSetOperation(
       const ParseSetOperation &set_operation_query,
+      const std::string &set_operation_name,
       const std::vector<const Type*> *type_hints,
       const NameResolver *parent_resolver);
 

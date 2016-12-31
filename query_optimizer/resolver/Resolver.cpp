@@ -375,6 +375,7 @@ L::LogicalPtr Resolver::resolve(const ParseStatement &parse_query) {
       }
       logical_plan_ =
           resolveSetOperation(*set_operation_statement.set_operation_query(),
+                              "", /* set operation name */
                               nullptr, /* type hints */
                               nullptr /* parent resolver*/);
       if (set_operation_statement.with_clause() != nullptr) {
@@ -1296,6 +1297,7 @@ L::LogicalPtr Resolver::resolveSelect(
 
 L::LogicalPtr Resolver::resolveSetOperations(
     const ParseSetOperation &parse_set_operations,
+    const std::string &set_operation_name,
     const std::vector<const Type*> *type_hints,
     const NameResolver *parent_resolver) {
   const PtrList<ParseTreeNode> &operands =
@@ -1308,7 +1310,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
   const ParseSetOperation &operation =
     static_cast<const ParseSetOperation&>(*iter);
   L::LogicalPtr operation_logical =
-    resolveSetOperation(operation, type_hints, parent_resolver);
+    resolveSetOperation(operation, set_operation_name, type_hints, parent_resolver);
   const std::vector<E::AttributeReferencePtr> operation_attributes =
     operation_logical->getOutputAttributes();
   resolved_operations.push_back(operation_logical);
@@ -1321,14 +1323,14 @@ L::LogicalPtr Resolver::resolveSetOperations(
     const ParseSetOperation &current_operation =
       static_cast<const ParseSetOperation&>(*iter);
     L::LogicalPtr current_logical =
-      resolveSetOperation(current_operation, type_hints, parent_resolver);
+      resolveSetOperation(current_operation, set_operation_name, type_hints, parent_resolver);
     const std::vector<E::AttributeReferencePtr> current_attributes =
       current_logical->getOutputAttributes();
 
     // check output attributes size
     if (current_attributes.size() != operation_attributes.size()) {
-      THROW_SQL_ERROR()
-        << "Can not perform " << current_operation.getName()
+      THROW_SQL_ERROR_AT(&current_operation)
+        << "Can not perform " << parse_set_operations.getName()
         << "opeartion between "<< std::to_string(current_attributes.size())
         << "and "<<std::to_string(operation_attributes.size())
         << "columns";
@@ -1384,6 +1386,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
 
 L::LogicalPtr Resolver::resolveSetOperation(
     const ParseSetOperation &set_operation_query,
+    const std::string &set_operation_name,
     const std::vector<const Type*> *type_hints,
     const NameResolver *parent_resolver) {
   switch (set_operation_query.getOperationType()) {
@@ -1391,6 +1394,7 @@ L::LogicalPtr Resolver::resolveSetOperation(
     case ParseSetOperation::kUnion:
     case ParseSetOperation::kUnionAll: {
       return resolveSetOperations(set_operation_query,
+                                  set_operation_name,
                                   type_hints,
                                   parent_resolver);
     }
@@ -1399,7 +1403,7 @@ L::LogicalPtr Resolver::resolveSetOperation(
       const ParseSelect &select_query =
         static_cast<const ParseSelect&>(*set_operation_query.operands().begin());
       return resolveSelect(select_query,
-                          "" /* select_name */,
+                          set_operation_name,
                           type_hints,
                           parent_resolver);
     }
@@ -1414,13 +1418,12 @@ E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
     ExpressionResolutionInfo *expression_resolution_info,
     const bool has_single_column) {
 
-  L::LogicalPtr logical_subquery;
-  /*
-   * =
-      resolveSelect(*parse_subquery_expression.query(),
-                    "" select_name,
-                    type_hints,
-                    &expression_resolution_info->name_resolver);
+  // Subquery is now a set operation, not only a select operation
+  L::LogicalPtr logical_subquery =
+      resolveSetOperation(*parse_subquery_expression.set_operation(),
+                          "" /* set operation name */,
+                          type_hints,
+                          &expression_resolution_info->name_resolver);
 
   // Raise SQL error if the subquery is expected to return only one column but
   // it returns multiple columns.
@@ -1432,7 +1435,7 @@ E::SubqueryExpressionPtr Resolver::resolveSubqueryExpression(
   if (!context_->has_nested_queries()) {
     context_->set_has_nested_queries();
   }
-  */
+
   return E::SubqueryExpression::Create(logical_subquery);
 }
 
@@ -1675,12 +1678,11 @@ L::LogicalPtr Resolver::resolveTableReference(const ParseTableReference &table_r
       DCHECK(reference_signature->table_alias() != nullptr);
 
       reference_alias = reference_signature->table_alias();
-      /*
-      logical_plan = resolveSelect(
-          *static_cast<const ParseSubqueryTableReference&>(table_reference).subquery_expr()->query(),
+      logical_plan = resolveSetOperation(
+          *static_cast<const ParseSubqueryTableReference&>(table_reference).subquery_expr()->set_operation(),
           reference_alias->value(),
-          nullptr  No Type hints ,
-          nullptr  parent_resolver );
+          nullptr  /* No Type hints */,
+          nullptr  /* parent_resolver */ );
 
       if (reference_signature->column_aliases() != nullptr) {
         logical_plan = RenameOutputColumns(logical_plan, *reference_signature);
@@ -1688,7 +1690,6 @@ L::LogicalPtr Resolver::resolveTableReference(const ParseTableReference &table_r
 
       name_resolver->addRelation(reference_alias, logical_plan);
       break;
-      */
     }
     case ParseTableReference::kJoinedTableReference: {
       NameResolver joined_table_name_resolver;

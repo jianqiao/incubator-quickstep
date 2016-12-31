@@ -53,10 +53,10 @@ L::LogicalPtr LogicalGenerator::generatePlan(
   resolver::Resolver resolver(catalog_database, optimizer_context_);
   std::cerr << "Parse tree:\n" << parse_statement.toString();
   logical_plan_ = resolver.resolve(parse_statement);
-  DVLOG(4) << "Initial logical plan:\n" << logical_plan_->toString();
+  std::cerr << "Initial logical plan:\n" << logical_plan_->toString();
 
   optimizePlan();
-  DVLOG(4) << "Optimized logical plan:\n" << logical_plan_->toString();
+  std::cerr << "Optimized logical plan:\n" << logical_plan_->toString();
 
   return logical_plan_;
 }
