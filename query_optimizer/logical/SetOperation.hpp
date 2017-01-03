@@ -78,8 +78,6 @@ class SetOperation : public Logical {
     return operands_.front()->getOutputAttributes();
   }
 
-  // TODO(Tianrun)
-  // Does this need to remove the duplicate?
   std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {
     std::vector<expressions::AttributeReferencePtr> referenced_attributes;
     for (const auto &operand : operands_) {

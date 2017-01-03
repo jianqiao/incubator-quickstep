@@ -1316,10 +1316,8 @@ L::LogicalPtr Resolver::resolveSetOperations(
     operation_logical->getOutputAttributes();
   attribute_matrix.push_back(operation_attributes);
   resolved_operations.push_back(operation_logical);
-  // TODO(Tianrun)
-  // generate new type_hints using operation_attributes?
 
-  // resolve the rest operations, and check the output attributes
+  // resolve the rest operations, and check the size of output attributes
   ++iter;
   for (; iter != operands.end(); ++iter) {
     const ParseSetOperation &current_operation =
@@ -1343,7 +1341,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
     resolved_operations.push_back(current_logical);
   }
 
-  // get the possible output attribute for all operands
+  // get the possible output attributes that the attributes of all operands can cast to
   std::vector<E::AttributeReferencePtr> possible_attributes;
   for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
        aid < operation_attributes.size();
@@ -1358,6 +1356,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
         if (possible_type.getSuperTypeID() == Type::SuperTypeID::kNumeric &&
             current_type.getSuperTypeID() == Type::SuperTypeID::kNumeric) {
           if (possible_type.isSafelyCoercibleFrom(current_type)){
+            // cast current_type to possible_type
             // possible_attribute remain the same, nothing needs to change
           } else if (current_type.isSafelyCoercibleFrom(possible_type)) {
             // cast possible_type to current_type
@@ -1376,10 +1375,10 @@ L::LogicalPtr Resolver::resolveSetOperations(
             << current_type.getName()
             << "and " << possible_type.getName();
         }
-      } // end of if(type.equals)
-    } // end of for(opid)
+      }
+    }
     possible_attributes.push_back(possible_attribute);
-  } // end of for(aid)
+  }
 
   // apply cast to all operands using possible_attributes
   for (std::vector<L::LogicalPtr>::size_type opid = 0;
@@ -1397,6 +1396,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
       }
     }
     if (need_cast) {
+      // generate a cast operation if needed
       std::vector<E::NamedExpressionPtr> cast_expressions;
       for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
           aid < operation_attributes.size();
@@ -1417,30 +1417,20 @@ L::LogicalPtr Resolver::resolveSetOperations(
         }
       }
       resolved_operations[opid] = L::Project::Create(resolved_operations[opid], cast_expressions);
-    } // end of if(need_cast)
+    }
   }
 
-  // TODO(Tianrun)
-  // Set operation types exist in both Parser and Logical level
-  // merge them into one?
-  L::LogicalPtr set_operation_logical;
+  // generate the set operation logical node
   switch (parse_set_operations.getOperationType()) {
-    case ParseSetOperation::kIntersect: {
-      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kIntersect);
-      break;
-    }
-    case ParseSetOperation::kUnion: {
-      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnion);
-      break;
-    }
-    case ParseSetOperation::kUnionAll: {
-      set_operation_logical = L::SetOperation::Create(resolved_operations, L::SetOperation::kUnionAll);
-      break;
-    }
+    case ParseSetOperation::kIntersect:
+      return L::SetOperation::Create(resolved_operations, L::SetOperation::kIntersect);
+    case ParseSetOperation::kUnion:
+      return L::SetOperation::Create(resolved_operations, L::SetOperation::kUnion);
+    case ParseSetOperation::kUnionAll:
+      return L::SetOperation::Create(resolved_operations, L::SetOperation::kUnionAll);
     default:
       LOG(FATAL) << "Unknown operation: " << parse_set_operations.toString();
   }
-  return set_operation_logical;
 }
 
 L::LogicalPtr Resolver::resolveSetOperation(
