@@ -1251,16 +1251,32 @@ set_operation_intersect:
     temp->addOperand($3);
     $$->addOperand(temp);
   }
+  // still have problem with INTERSECT
+  // can not handle this case: (a UNION b) INTERSECT (c UNION d)
+  /*
+  | set_operation_intersect TOKEN_INTERSECT '(' set_operation_union ')' {
+    $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
+    $$->addOperand($1);
+    $$->addOperand($4);
+  }
+  | '(' set_operation_union ')' TOKEN_INTERSECT set_operation_intersect {
+    $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
+    $$->addOperand($2);
+    $$->addOperand($5);
+  }
+  */
+  // if add this rule, there will be shift reduce conflict
+  /*
+  | '(' set_operation_union ')' TOKEN_INTERSECT '(' set_operation_union ')' {
+    $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
+    $$->addOperand($2);
+    $$->addOperand($6);
+  }
+  */
   | select_query {
     $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kSingle);
     $$->addOperand($1);
   }
-  /*
-    currently does not spport this one, because it has reduce/reduce conflicts with subquery_expression
-  | '(' set_operation_union ')' {
-    $$ = $2;
-  }
-  */
 
 select_query:
   TOKEN_SELECT opt_all_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
