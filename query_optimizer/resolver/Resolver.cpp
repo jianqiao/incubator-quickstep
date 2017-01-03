@@ -1304,6 +1304,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
     parse_set_operations.operands();
   DCHECK_GT(operands.size(), 1);
   std::vector<L::LogicalPtr> resolved_operations;
+  std::vector<std::vector<E::AttributeReferencePtr>> attribute_matrix;
 
   // resolve the first operation, and get the output attributes
   PtrList<ParseTreeNode>::PtrListConstIterator iter = operands.begin();
@@ -1313,6 +1314,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
     resolveSetOperation(operation, set_operation_name, type_hints, parent_resolver);
   const std::vector<E::AttributeReferencePtr> operation_attributes =
     operation_logical->getOutputAttributes();
+  attribute_matrix.push_back(operation_attributes);
   resolved_operations.push_back(operation_logical);
   // TODO(Tianrun)
   // generate new type_hints using operation_attributes?
@@ -1326,8 +1328,10 @@ L::LogicalPtr Resolver::resolveSetOperations(
       resolveSetOperation(current_operation, set_operation_name, type_hints, parent_resolver);
     const std::vector<E::AttributeReferencePtr> current_attributes =
       current_logical->getOutputAttributes();
+    attribute_matrix.push_back(current_attributes);
 
     // check output attributes size
+    // detailed type check and type cast will perform later
     if (current_attributes.size() != operation_attributes.size()) {
       THROW_SQL_ERROR_AT(&current_operation)
         << "Can not perform " << parse_set_operations.getName()
@@ -1336,29 +1340,84 @@ L::LogicalPtr Resolver::resolveSetOperations(
         << "columns";
     }
 
-    // check type details
-    // TODO(Tianrun)
-    // currently does not support type cast
-    for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
-         aid < operation_attributes.size();
-        ++aid) {
-      const Type& operation_type = operation_attributes[aid]->getValueType();
-      const Type& current_type = current_attributes[aid]->getValueType();
-      if (!operation_type.equals(current_type)) {
-        THROW_SQL_ERROR()
-          << "Type is different between "
-          << operation_attributes[aid]->attribute_name()
-          << " and " << current_attributes[aid]->attribute_name();
-      }
-    }
     resolved_operations.push_back(current_logical);
   }
 
-  std::vector<E::NamedExpressionPtr> cast_expressions;
-  for (std::vector<E::AttributeReferencePtr>::size_type aid = 0;
+  // get the possible output attribute for all operands
+  std::vector<E::AttributeReferencePtr> possible_attributes;
+  for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
        aid < operation_attributes.size();
        ++aid) {
-    cast_expressions.emplace_back(operation_attributes[aid]);
+    E::AttributeReferencePtr possible_attribute = attribute_matrix[0][aid];
+    for (std::vector<L::LogicalPtr>::size_type opid = 1;
+         opid < resolved_operations.size();
+         ++opid) {
+      const Type &current_type = attribute_matrix[opid][aid]->getValueType();
+      const Type &possible_type = possible_attribute->getValueType();
+      if (!possible_type.equals(current_type)) {
+        if (possible_type.getSuperTypeID() == Type::SuperTypeID::kNumeric &&
+            current_type.getSuperTypeID() == Type::SuperTypeID::kNumeric) {
+          if (possible_type.isSafelyCoercibleFrom(current_type)){
+            // possible_attribute remain the same, nothing needs to change
+          } else if (current_type.isSafelyCoercibleFrom(possible_type)) {
+            // cast possible_type to current_type
+            possible_attribute = attribute_matrix[opid][aid];
+          } else {
+            // can not cast between possible_type and current_type
+            // throw and SQL error
+            THROW_SQL_ERROR_AT(&parse_set_operations)
+              << "There is not a safely coerce between "
+              << current_type.getName()
+              << "and " << possible_type.getName();
+          }
+        } else {
+          THROW_SQL_ERROR_AT(&parse_set_operations)
+            << "Does not support cast operation between non-numeric types"
+            << current_type.getName()
+            << "and " << possible_type.getName();
+        }
+      } // end of if(type.equals)
+    } // end of for(opid)
+    possible_attributes.push_back(possible_attribute);
+  } // end of for(aid)
+
+  // apply cast to all operands using possible_attributes
+  for (std::vector<L::LogicalPtr>::size_type opid = 0;
+       opid < resolved_operations.size();
+       ++opid) {
+    bool need_cast = false;
+    for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
+         aid < operation_attributes.size();
+         ++aid) {
+      const Type &possible_type = possible_attributes[aid]->getValueType();
+      const Type &current_type = attribute_matrix[opid][aid]->getValueType();
+      if (!possible_type.equals(current_type)) {
+        need_cast = true;
+        break;
+      }
+    }
+    if (need_cast) {
+      std::vector<E::NamedExpressionPtr> cast_expressions;
+      for (std::vector<E::NamedExpressionPtr>::size_type aid = 0;
+          aid < operation_attributes.size();
+          ++aid) {
+        const Type &possible_type = possible_attributes[aid]->getValueType();
+        const Type &current_type = attribute_matrix[opid][aid]->getValueType();
+        if (possible_type.equals(current_type)) {
+          cast_expressions.emplace_back(attribute_matrix[opid][aid]);
+        } else {
+          const E::AttributeReferencePtr attr = attribute_matrix[opid][aid];
+          const E::ExpressionPtr cast_expr =
+            E::Cast::Create(attr, possible_type);
+          cast_expressions.emplace_back(
+              E::Alias::Create(context_->nextExprId(),
+                               cast_expr,
+                               attr->attribute_name(),
+                               attr->attribute_alias()));
+        }
+      }
+      resolved_operations[opid] = L::Project::Create(resolved_operations[opid], cast_expressions);
+    } // end of if(need_cast)
   }
 
   // TODO(Tianrun)
@@ -1381,7 +1440,7 @@ L::LogicalPtr Resolver::resolveSetOperations(
     default:
       LOG(FATAL) << "Unknown operation: " << parse_set_operations.toString();
   }
-  return L::Project::Create(set_operation_logical, cast_expressions);
+  return set_operation_logical;
 }
 
 L::LogicalPtr Resolver::resolveSetOperation(
