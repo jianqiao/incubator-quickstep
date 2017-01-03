@@ -67,6 +67,7 @@ typedef struct YYLTYPE {
 #include <utility>
 
 #include "catalog/PartitionSchemeHeader.hpp"
+#include "parser/ParseAllDistinct.hpp"
 #include "parser/ParseAssignment.hpp"
 #include "parser/ParseAttributeDefinition.hpp"
 #include "parser/ParseBasicExpressions.hpp"
@@ -126,6 +127,7 @@ typedef void* yyscan_t;
   bool boolean_value_;
   int* int_value_;
 
+  quickstep::ParseAllDistinct *all_distinct_;
   quickstep::NumericParseLiteralValue *numeric_literal_value_;
   quickstep::ParseLiteralValue *literal_value_;
   quickstep::PtrList<quickstep::ParseScalarLiteral> *literal_value_list_;
@@ -616,7 +618,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %type <command_argument_list_>
   command_argument_list
 
-%type <int_value_>
+%type <all_distinct_>
   opt_all_distinct
 
 /*
@@ -1217,12 +1219,14 @@ with_list_element:
 
 set_operation_union:
   set_operation_union TOKEN_UNION opt_all_distinct set_operation_intersect {
-    if ($1->getOperationType() == quickstep::ParseSetOperation::kUnion && (*$3 == 0 || *$3 == -1)) {
+    if ($1->getOperationType() == quickstep::ParseSetOperation::kUnion &&
+        ($3->getType() == quickstep::ParseAllDistinct::kUnknown || $3->getType() == quickstep::ParseAllDistinct::kDistinct)) {
       $$ = $1;
-    } else if ($1->getOperationType() == quickstep::ParseSetOperation::kUnionAll && (*$3 == 1)) {
+    } else if ($1->getOperationType() == quickstep::ParseSetOperation::kUnionAll &&
+        ($3->getType() == quickstep::ParseAllDistinct::kAll)) {
       $$ = $1;
     } else {
-      if (*$3 == 1) {
+      if ($3->getType() == quickstep::ParseAllDistinct::kAll) {
         $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kUnionAll);
       } else {
         $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kUnion);
@@ -1266,13 +1270,13 @@ select_query:
 
 opt_all_distinct:
   {
-    $$ = new int(0);
+    $$ = new quickstep::ParseAllDistinct(quickstep::ParseAllDistinct::kUnknown);
   }
   | TOKEN_ALL {
-    $$ = new int(1);
+    $$ = new quickstep::ParseAllDistinct(quickstep::ParseAllDistinct::kAll);
   }
   | TOKEN_DISTINCT {
-    $$ = new int(-1);
+    $$ = new quickstep::ParseAllDistinct(quickstep::ParseAllDistinct::kDistinct);
   };
 
 selection:

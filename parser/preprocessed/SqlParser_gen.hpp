@@ -186,7 +186,7 @@ extern int quickstep_yydebug;
 typedef union YYSTYPE YYSTYPE;
 union YYSTYPE
 {
-#line 121 "../SqlParser.ypp" /* yacc.c:1909  */
+#line 122 "../SqlParser.ypp" /* yacc.c:1909  */
 
   quickstep::ParseString *string_value_;
 
@@ -195,6 +195,7 @@ union YYSTYPE
   bool boolean_value_;
   int* int_value_;
 
+  quickstep::ParseAllDistinct *all_distinct_;
   quickstep::NumericParseLiteralValue *numeric_literal_value_;
   quickstep::ParseLiteralValue *literal_value_;
   quickstep::PtrList<quickstep::ParseScalarLiteral> *literal_value_list_;
@@ -289,7 +290,7 @@ union YYSTYPE
 
   quickstep::ParsePriority *opt_priority_clause_;
 
-#line 293 "SqlParser_gen.hpp" /* yacc.c:1909  */
+#line 294 "SqlParser_gen.hpp" /* yacc.c:1909  */
 };
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1

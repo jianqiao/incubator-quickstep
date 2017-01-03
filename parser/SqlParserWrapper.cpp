@@ -34,6 +34,7 @@ namespace quickstep {
 class BinaryOperation;
 class Comparison;
 class NumericParseLiteralValue;
+class ParseAllDistinct;
 class ParseAssignment;
 class ParseAttribute;
 class ParseAttributeDefinition;
