@@ -35,6 +35,7 @@
 #include "query_optimizer/logical/InsertTuple.hpp"
 #include "query_optimizer/logical/LogicalType.hpp"
 #include "query_optimizer/logical/Sample.hpp"
+#include "query_optimizer/logical/SetOperation.hpp"
 #include "query_optimizer/logical/SharedSubplanReference.hpp"
 #include "query_optimizer/logical/Sort.hpp"
 #include "query_optimizer/logical/TableGenerator.hpp"
@@ -55,6 +56,7 @@
 #include "query_optimizer/physical/TableGenerator.hpp"
 #include "query_optimizer/physical/TableReference.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
+#include "query_optimizer/physical/UnionAll.hpp"
 #include "query_optimizer/physical/UpdateTable.hpp"
 #include "query_optimizer/physical/WindowAggregate.hpp"
 
@@ -161,6 +163,19 @@ bool OneToOne::generatePlan(const L::LogicalPtr &logical_input,
           physical_mapper_->createOrGetPhysicalFromLogical(sample->input()),
           sample->is_block_sample(),
           sample->percentage());
+      return true;
+    }
+    case L::LogicalType::kSetOperation: {
+      const L::SetOperationPtr set_operation =
+          std::static_pointer_cast<const L::SetOperation>(logical_input);
+      const std::vector<L::LogicalPtr> &operands = set_operation->getOperands();
+      std::vector<P::PhysicalPtr> physical_operands;
+      for (const L::LogicalPtr &operand : operands) {
+        physical_operands.push_back(physical_mapper_->createOrGetPhysicalFromLogical(operand));
+      }
+      if (set_operation->getSetOperationType() == L::SetOperation::kUnionAll) {
+        *physical_output = P::UnionAll::Create(physical_operands);
+      }
       return true;
     }
     case L::LogicalType::kSort: {

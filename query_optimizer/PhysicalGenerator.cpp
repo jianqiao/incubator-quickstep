@@ -85,10 +85,10 @@ P::PhysicalPtr PhysicalGenerator::generateInitialPlan(
   // Choose the first generated physical plan as the best one.
   P::PhysicalPtr physical_plan;
   for (std::unique_ptr<S::Strategy> &strategy : strategies_) {
-    DVLOG(5) << "Apply strategy " << strategy->getName() << " to "
+    std::cerr << "Apply strategy " << strategy->getName() << " to "
              << logical_plan->getShortString();
     if (strategy->generatePlan(logical_plan, &physical_plan)) {
-      DVLOG(5) << "Result:\n" << physical_plan->toString();
+      std::cerr << "Result:\n" << physical_plan->toString();
       break;
     }
   }
