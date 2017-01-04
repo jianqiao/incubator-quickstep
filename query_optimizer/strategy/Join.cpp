@@ -161,8 +161,14 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
                                               right->getOutputAttributes(),
                                               nullptr /* residual_predicate  */,
                                               L::HashJoin::JoinType::kLeftSemiJoin);
+      std::vector<E::NamedExpressionPtr> project_expressions;
+      for (const auto & attribute : left->getOutputAttributes()) {
+        project_expressions.emplace_back(attribute);
+      }
+      logical_project = L::Project::Create(logical_hash_join,
+                                           project_expressions);
       if (logical_set_operation->getSetOperationType() == L::SetOperation::kIntersect) {
-        addHashJoin(nullptr /* logical_project  */,
+        addHashJoin(logical_project,
                     nullptr /* logical_filter  */,
                     logical_hash_join,
                     physical_output);

@@ -30,6 +30,7 @@
 #include "query_optimizer/logical/Aggregate.hpp"
 #include "query_optimizer/logical/Logical.hpp"
 #include "query_optimizer/logical/PatternMatcher.hpp"
+#include "query_optimizer/logical/SetOperation.hpp"
 #include "query_optimizer/physical/Aggregate.hpp"
 #include "query_optimizer/physical/PatternMatcher.hpp"
 #include "query_optimizer/physical/Physical.hpp"
@@ -47,19 +48,38 @@ namespace P = ::quickstep::optimizer::physical;
 bool Aggregate::generatePlan(const L::LogicalPtr &logical_input,
                              P::PhysicalPtr *physical_output) {
   L::AggregatePtr logical_aggregate;
+  L::SetOperationPtr logical_set_operation;
 
-  if (!L::SomeAggregate::MatchesWithConditionalCast(logical_input, &logical_aggregate)) {
+  // For INTERSECT and UNION DISTINCT operations,
+  // need to do a aggregate to remove the duplicate tuples
+  if (!L::SomeAggregate::MatchesWithConditionalCast(logical_input, &logical_aggregate) &&
+      !L::SomeSetOperation::MatchesWithConditionalCast(logical_input, &logical_set_operation)) {
     return false;
   }
 
-  std::vector<E::NamedExpressionPtr> grouping_expressions =
-      logical_aggregate->grouping_expressions();
-  std::vector<E::NamedExpressionPtr> aggregate_expressions =
-      E::ToNamedExpressions(logical_aggregate->aggregate_expressions());
+  std::vector<E::NamedExpressionPtr> grouping_expressions;
+  std::vector<E::NamedExpressionPtr> aggregate_expressions;
+  P::PhysicalPtr best_input_plan;
+  if (logical_aggregate != nullptr) {
+    grouping_expressions =
+        logical_aggregate->grouping_expressions();
+    aggregate_expressions =
+        E::ToNamedExpressions(logical_aggregate->aggregate_expressions());
 
-  P::PhysicalPtr best_input_plan =
+    best_input_plan =
+        physical_mapper_->createOrGetPhysicalFromLogical(
+            logical_aggregate->input());
+  } else if(logical_set_operation != nullptr) {
+    // For set operations like INTERSECT and UNION DISTINCT
+    for (const auto & attribute : logical_set_operation->getOutputAttributes()) {
+      grouping_expressions.emplace_back(attribute);
+    }
+    aggregate_expressions = grouping_expressions;
+
+    best_input_plan =
       physical_mapper_->createOrGetPhysicalFromLogical(
-          logical_aggregate->input());
+          logical_set_operation);
+  }
 
   // Pull up the child Selection.
   P::SelectionPtr input_selection;
