@@ -65,7 +65,7 @@ class UnionAll : public Physical {
   }
 
   std::vector<expressions::AttributeReferencePtr> getOutputAttributes() const override {
-    return {};
+    return operands_.front()->getOutputAttributes();
   }
 
   std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {

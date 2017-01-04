@@ -37,6 +37,7 @@
 #include "query_optimizer/logical/NestedLoopsJoin.hpp"
 #include "query_optimizer/logical/PatternMatcher.hpp"
 #include "query_optimizer/logical/Project.hpp"
+#include "query_optimizer/logical/SetOperation.hpp"
 #include "query_optimizer/physical/HashJoin.hpp"
 #include "query_optimizer/physical/NestedLoopsJoin.hpp"
 #include "query_optimizer/physical/PatternMatcher.hpp"
@@ -61,6 +62,7 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
   L::FilterPtr logical_filter;
   L::HashJoinPtr logical_hash_join;
   L::NestedLoopsJoinPtr logical_nested_loops_join;
+  L::SetOperationPtr logical_set_operation;
 
   // Collapse project-join.
   if (L::SomeProject::MatchesWithConditionalCast(logical_input, &logical_project)) {
@@ -133,6 +135,40 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
           CastSharedPtrVector<E::NamedExpression>(
               logical_nested_loops_join->getOutputAttributes()),
           physical_output);
+      return true;
+    }
+  }
+
+  // Convert set operation to hash join operation
+  // INTERSECT and UNION DISTINCT are calculated in this way
+  if (L::SomeSetOperation::MatchesWithConditionalCast(logical_input, &logical_set_operation)) {
+    if (logical_set_operation->getSetOperationType() !=  L::SetOperation::kUnionAll) {
+      // if set operation type is not UnionAll, build a hash join operator
+      const std::vector<L::LogicalPtr> &operands = logical_set_operation->getOperands();
+      L::LogicalPtr left = operands.front(), right;
+      if (operands.size() == 2) {
+        right = operands.back();
+      } else {
+        std::vector<L::LogicalPtr> new_operands;
+        for (std::vector<L::LogicalPtr>::size_type opid=1; opid < operands.size(); opid++) {
+          new_operands.push_back(operands[opid]);
+        }
+        right = logical_set_operation->copyWithNewChildren(new_operands);
+      }
+      logical_hash_join = L::HashJoin::Create(left,
+                                              right,
+                                              left->getOutputAttributes(),
+                                              right->getOutputAttributes(),
+                                              nullptr /* residual_predicate  */,
+                                              L::HashJoin::JoinType::kLeftSemiJoin);
+      if (logical_set_operation->getSetOperationType() == L::SetOperation::kIntersect) {
+        addHashJoin(nullptr /* logical_project  */,
+                    nullptr /* logical_filter  */,
+                    logical_hash_join,
+                    physical_output);
+      } else if (logical_set_operation->getSetOperationType() == L::SetOperation::kUnion) {
+
+      }
       return true;
     }
   }

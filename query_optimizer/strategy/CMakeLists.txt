@@ -59,6 +59,7 @@ target_link_libraries(quickstep_queryoptimizer_strategy_Join
                       quickstep_queryoptimizer_logical_NestedLoopsJoin
                       quickstep_queryoptimizer_logical_PatternMatcher
                       quickstep_queryoptimizer_logical_Project
+                      quickstep_queryoptimizer_logical_SetOperation
                       quickstep_queryoptimizer_physical_HashJoin
                       quickstep_queryoptimizer_physical_NestedLoopsJoin
                       quickstep_queryoptimizer_physical_PatternMatcher

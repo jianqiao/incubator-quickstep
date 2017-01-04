@@ -92,7 +92,7 @@ class SetOperation : public Logical {
 
   LogicalPtr copyWithNewChildren(
       const std::vector<LogicalPtr> &new_children) const override {
-    DCHECK_EQ(new_children.size(), children().size());
+    //DCHECK_EQ(new_children.size(), children().size());
     return SetOperation::Create(new_children, set_operation_type_);
   }
 
