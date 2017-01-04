@@ -24,6 +24,7 @@
 #include "query_optimizer/expressions/AttributeReference.hpp"
 #include "query_optimizer/logical/Logical.hpp"
 #include "query_optimizer/logical/LogicalType.hpp"
+#include "utility/Cast.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
@@ -97,6 +98,10 @@ class SetOperation : public Logical {
 
   SetOperationType getSetOperationType() const {
     return set_operation_type_;
+  }
+
+  const std::vector<LogicalPtr>& getOperands() const {
+    return operands_;
   }
 
   static SetOperationPtr Create(const std::vector<LogicalPtr> &operands, const SetOperationType type) {
