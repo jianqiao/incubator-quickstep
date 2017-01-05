@@ -89,6 +89,7 @@
 #include "query_optimizer/physical/TableGenerator.hpp"
 #include "query_optimizer/physical/TableReference.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
+#include "query_optimizer/physical/UnionAll.hpp"
 #include "query_optimizer/physical/UpdateTable.hpp"
 #include "query_optimizer/physical/WindowAggregate.hpp"
 #include "relational_operators/AggregationOperator.hpp"
@@ -299,6 +300,9 @@ void ExecutionGenerator::generatePlanInternal(
     case P::PhysicalType::kTableReference:
       return convertTableReference(
           std::static_pointer_cast<const P::TableReference>(physical_plan));
+    case P::PhysicalType::kUnionAll:
+      return convertUnionAll(
+          std::static_pointer_cast<const P::UnionAll>(physical_plan));
     case P::PhysicalType::kUpdateTable:
       return convertUpdateTable(
           std::static_pointer_cast<const P::UpdateTable>(physical_plan));
@@ -1243,6 +1247,22 @@ void ExecutionGenerator::convertInsertSelection(
   execution_plan_->addDirectDependency(save_blocks_index,
                                        insert_selection_index,
                                        false /* is_pipeline_breaker */);
+}
+
+void ExecutionGenerator::convertUnionAll(
+    const P::UnionAllPtr &physical_unionall) {
+  // Create InsertDestination proto
+  const CatalogRelation *output_relation = nullptr;
+  const QueryContext::insert_destination_id insert_destination_index =
+    query_context_proto_->insert_destinations_size();
+  S::InsertDestination *insert_destination_proto =
+    query_context_proto_->add_insert_destinations();
+  createTemporaryCatalogRelation(physical_unionall,
+                                 &output_relation,
+                                 insert_destination_proto);
+
+  // add a UnionAll operator
+
 }
 
 void ExecutionGenerator::convertUpdateTable(
