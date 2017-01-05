@@ -168,13 +168,27 @@ bool OneToOne::generatePlan(const L::LogicalPtr &logical_input,
     case L::LogicalType::kSetOperation: {
       const L::SetOperationPtr set_operation =
           std::static_pointer_cast<const L::SetOperation>(logical_input);
-      const std::vector<L::LogicalPtr> &operands = set_operation->getOperands();
-      std::vector<P::PhysicalPtr> physical_operands;
-      for (const L::LogicalPtr &operand : operands) {
-        physical_operands.push_back(physical_mapper_->createOrGetPhysicalFromLogical(operand));
-      }
       if (set_operation->getSetOperationType() == L::SetOperation::kUnionAll) {
-        *physical_output = P::UnionAll::Create(physical_operands);
+        // For UnionAll operation, map it into UnionAll physical node
+        // For UnionAll operation, change the representation from multiple branch tree structure
+        // to binary tree structure
+        const std::vector<L::LogicalPtr> &operands = set_operation->getOperands();
+        L::LogicalPtr logical_left = operands.front(), logical_right;
+        if (operands.size() == 2) {
+          logical_right = operands.back();
+        } else {
+          std::vector<L::LogicalPtr> new_operands;
+          for (std::vector<L::LogicalPtr>::size_type opid = 1; opid < operands.size(); opid++) {
+            new_operands.push_back(operands[opid]);
+          }
+          logical_right = set_operation->copyWithNewChildren(new_operands);
+        }
+
+        P::PhysicalPtr physical_left = physical_mapper_->createOrGetPhysicalFromLogical(logical_left);
+        P::PhysicalPtr physical_right = physical_mapper_->createOrGetPhysicalFromLogical(logical_right);
+        *physical_output = P::UnionAll::Create(physical_left, physical_right);
+      } else {
+        // For Intersect and UnionDistinct operations, map them into HashJoin physical node
       }
       return true;
     }

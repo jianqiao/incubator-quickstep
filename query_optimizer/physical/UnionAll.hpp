@@ -54,28 +54,29 @@ class UnionAll : public Physical {
   std::string getName() const override { return "UnionAll"; }
 
   /**
-   * @return The children physical nodes of this union all operation
+   * @return The left and right operand of this union all operation
    */
-  const std::vector<PhysicalPtr>& operands() const { return operands_; }
+  const PhysicalPtr& left() const { return left_; }
+  const PhysicalPtr& right() const { return right_; }
 
   PhysicalPtr copyWithNewChildren(
       const std::vector<PhysicalPtr> &new_children) const override {
     DCHECK_EQ(getNumChildren(), new_children.size());
-    return Create(new_children);
+    return Create(new_children[0], new_children[1]);
   }
 
   std::vector<expressions::AttributeReferencePtr> getOutputAttributes() const override {
-    return operands_.front()->getOutputAttributes();
+    return left_->getOutputAttributes();
   }
 
   std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {
     std::vector<expressions::AttributeReferencePtr> referenced_attributes;
-    for (const auto &operand : operands_) {
-      const std::vector<expressions::AttributeReferencePtr> reference = operand->getReferencedAttributes();
-      referenced_attributes.insert(referenced_attributes.end(),
-                                   reference.begin(),
-                                   reference.end());
-    }
+    referenced_attributes.insert(referenced_attributes.end(),
+                                 left_->getReferencedAttributes().begin(),
+                                 left_->getReferencedAttributes().end());
+    referenced_attributes.insert(referenced_attributes.end(),
+                                 right_->getReferencedAttributes().begin(),
+                                 right_->getReferencedAttributes().end());
     return referenced_attributes;
   }
 
@@ -91,8 +92,9 @@ class UnionAll : public Physical {
    * @param operands The children physical node of union all
    * @return An immutable UnionAll node.
    */
-  static UnionAllPtr Create(const std::vector<PhysicalPtr> &operands) {
-    return UnionAllPtr(new UnionAll(operands));
+  static UnionAllPtr Create(const PhysicalPtr &left,
+                            const PhysicalPtr &right) {
+    return UnionAllPtr(new UnionAll(left, right));
   }
 
  protected:
@@ -103,20 +105,23 @@ class UnionAll : public Physical {
       std::vector<OptimizerTreeBaseNodePtr> *non_container_child_fields,
       std::vector<std::string> *container_child_field_names,
       std::vector<std::vector<OptimizerTreeBaseNodePtr>> *container_child_fields) const override {
-    container_child_field_names->push_back("operands");
-    container_child_fields->push_back(
-        CastSharedPtrVector<OptimizerTreeBase>(operands_));
+    non_container_child_field_names->push_back("left");
+    non_container_child_field_names->push_back("right");
+
+    non_container_child_fields->push_back(left_);
+    non_container_child_fields->push_back(right_);
   }
 
  private:
-  UnionAll(const std::vector<PhysicalPtr> &operands) {
-    for (const PhysicalPtr &operand : operands) {
-      operands_.push_back(operand);
-      addChild(operand);
-    }
+  UnionAll(const PhysicalPtr &left,
+           const PhysicalPtr &right)
+      : left_(left), right_(right) {
+    addChild(left_);
+    addChild(right_);
   }
 
-  std::vector<PhysicalPtr> operands_;
+  PhysicalPtr left_;
+  PhysicalPtr right_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAll);
 };
