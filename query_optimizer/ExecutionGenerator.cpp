@@ -1251,6 +1251,7 @@ void ExecutionGenerator::convertInsertSelection(
 
 void ExecutionGenerator::convertUnionAll(
     const P::UnionAllPtr &physical_unionall) {
+    /*
   // Create InsertDestination proto
   const CatalogRelation *output_relation = nullptr;
   const QueryContext::insert_destination_id insert_destination_index =
@@ -1262,6 +1263,7 @@ void ExecutionGenerator::convertUnionAll(
                                  insert_destination_proto);
 
   // add a UnionAll operator
+    */
 
 }
 

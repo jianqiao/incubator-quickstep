@@ -35,7 +35,6 @@ target_link_libraries(quickstep_queryoptimizer_strategy_Aggregate
                       quickstep_queryoptimizer_logical_Aggregate
                       quickstep_queryoptimizer_logical_Logical
                       quickstep_queryoptimizer_logical_PatternMatcher
-                      quickstep_queryoptimizer_logical_SetOperation
                       quickstep_queryoptimizer_physical_Aggregate
                       quickstep_queryoptimizer_physical_PatternMatcher
                       quickstep_queryoptimizer_physical_Physical
@@ -61,7 +60,9 @@ target_link_libraries(quickstep_queryoptimizer_strategy_Join
                       quickstep_queryoptimizer_logical_PatternMatcher
                       quickstep_queryoptimizer_logical_Project
                       quickstep_queryoptimizer_logical_SetOperation
+                      quickstep_queryoptimizer_physical_Aggregate
                       quickstep_queryoptimizer_physical_HashJoin
+                      quickstep_queryoptimizer_physical_InsertSelection
                       quickstep_queryoptimizer_physical_NestedLoopsJoin
                       quickstep_queryoptimizer_physical_PatternMatcher
                       quickstep_queryoptimizer_physical_Physical

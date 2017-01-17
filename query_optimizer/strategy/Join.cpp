@@ -38,7 +38,9 @@
 #include "query_optimizer/logical/PatternMatcher.hpp"
 #include "query_optimizer/logical/Project.hpp"
 #include "query_optimizer/logical/SetOperation.hpp"
+#include "query_optimizer/physical/Aggregate.hpp"
 #include "query_optimizer/physical/HashJoin.hpp"
+#include "query_optimizer/physical/InsertSelection.hpp"
 #include "query_optimizer/physical/NestedLoopsJoin.hpp"
 #include "query_optimizer/physical/PatternMatcher.hpp"
 #include "query_optimizer/physical/Physical.hpp"
@@ -155,25 +157,53 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
         }
         right = logical_set_operation->copyWithNewChildren(new_operands);
       }
-      logical_hash_join = L::HashJoin::Create(left,
-                                              right,
-                                              left->getOutputAttributes(),
-                                              right->getOutputAttributes(),
-                                              nullptr /* residual_predicate  */,
-                                              L::HashJoin::JoinType::kLeftSemiJoin);
       std::vector<E::NamedExpressionPtr> project_expressions;
       for (const auto & attribute : left->getOutputAttributes()) {
         project_expressions.emplace_back(attribute);
       }
-      logical_project = L::Project::Create(logical_hash_join,
-                                           project_expressions);
       if (logical_set_operation->getSetOperationType() == L::SetOperation::kIntersect) {
+        logical_hash_join = L::HashJoin::Create(left,
+                                                right,
+                                                left->getOutputAttributes(),
+                                                right->getOutputAttributes(),
+                                                nullptr /* residual_predicate  */,
+                                                L::HashJoin::JoinType::kLeftSemiJoin);
+        logical_project = L::Project::Create(logical_hash_join,
+                                             project_expressions);
+        P::PhysicalPtr physical_hash_join;
         addHashJoin(logical_project,
                     nullptr /* logical_filter  */,
                     logical_hash_join,
-                    physical_output);
+                    &physical_hash_join);
+        *physical_output = P::Aggregate::Create(physical_hash_join,
+                                               project_expressions,
+                                               {}, /* aggregate_expressions */
+                                               nullptr /* filter_predicate  */);
       } else if (logical_set_operation->getSetOperationType() == L::SetOperation::kUnion) {
+        logical_hash_join = L::HashJoin::Create(left,
+                                                right,
+                                                left->getOutputAttributes(),
+                                                right->getOutputAttributes(),
+                                                nullptr /* residual_predicate  */,
+                                                L::HashJoin::JoinType::kLeftAntiJoin);
+        logical_project = L::Project::Create(logical_hash_join,
+                                             project_expressions);
+        P::PhysicalPtr physical_hash_join;
+        addHashJoin(logical_project,
+                    nullptr /* logical_filter  */,
+                    logical_hash_join,
+                    &physical_hash_join);
 
+        P::PhysicalPtr left_original =
+          physical_mapper_->createOrGetPhysicalFromLogical(left);
+        P::PhysicalPtr left_aggregated =
+          P::Aggregate::Create(left_original,
+                               project_expressions,
+                               {}, /* aggregate_expressions  */
+                               nullptr /*  filter_predicate */);
+
+        *physical_output = P::InsertSelection::Create(left_aggregated,
+                                                      physical_hash_join);
       }
       return true;
     }
