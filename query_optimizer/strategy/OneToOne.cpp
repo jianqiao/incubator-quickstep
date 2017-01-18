@@ -43,6 +43,7 @@
 #include "query_optimizer/logical/TopLevelPlan.hpp"
 #include "query_optimizer/logical/UpdateTable.hpp"
 #include "query_optimizer/logical/WindowAggregate.hpp"
+#include "query_optimizer/physical/Aggregate.hpp"
 #include "query_optimizer/physical/CopyFrom.hpp"
 #include "query_optimizer/physical/CreateIndex.hpp"
 #include "query_optimizer/physical/CreateTable.hpp"
@@ -168,29 +169,27 @@ bool OneToOne::generatePlan(const L::LogicalPtr &logical_input,
     case L::LogicalType::kSetOperation: {
       const L::SetOperationPtr set_operation =
           std::static_pointer_cast<const L::SetOperation>(logical_input);
-      if (set_operation->getSetOperationType() == L::SetOperation::kUnionAll) {
-        // For UnionAll operation, map it into UnionAll physical node
-        // For UnionAll operation, change the representation from multiple branch tree structure
-        // to binary tree structure
-        const std::vector<L::LogicalPtr> &operands = set_operation->getOperands();
-        L::LogicalPtr logical_left = operands.front(), logical_right;
-        if (operands.size() == 2) {
-          logical_right = operands.back();
-        } else {
-          std::vector<L::LogicalPtr> new_operands;
-          for (std::vector<L::LogicalPtr>::size_type opid = 1; opid < operands.size(); opid++) {
-            new_operands.push_back(operands[opid]);
-          }
-          logical_right = set_operation->copyWithNewChildren(new_operands);
-        }
-
-        P::PhysicalPtr physical_left = physical_mapper_->createOrGetPhysicalFromLogical(logical_left);
-        P::PhysicalPtr physical_right = physical_mapper_->createOrGetPhysicalFromLogical(logical_right);
-        *physical_output = P::UnionAll::Create(physical_left, physical_right);
-      } else {
-        // For Intersect and UnionDistinct operations, map them into HashJoin physical node
+      std::vector<P::PhysicalPtr> physical_operands;
+      for (const L::LogicalPtr &logical : set_operation->getOperands()) {
+        physical_operands.push_back(physical_mapper_->createOrGetPhysicalFromLogical(logical));
       }
-      return true;
+      if (set_operation->getSetOperationType() == L::SetOperation::kUnionAll) {
+        *physical_output = P::UnionAll::Create(physical_operands);
+        return true;
+      } else if (set_operation->getSetOperationType() == L::SetOperation::kUnion) {
+        P::PhysicalPtr union_all =
+          P::UnionAll::Create(physical_operands);
+        std::vector<E::NamedExpressionPtr> project_expressions;
+        for (const auto & attribute : set_operation->getOutputAttributes()) {
+          project_expressions.emplace_back(attribute);
+        }
+        *physical_output = P::Aggregate::Create(union_all,
+                                                project_expressions,
+                                                {}, /* aggregate_expressions  */
+                                                nullptr /* filter_predicate  */);
+      } else {
+        return false;
+      }
     }
     case L::LogicalType::kSort: {
       const L::Sort *sort =

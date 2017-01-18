@@ -142,10 +142,10 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
   }
 
   // Convert set operation to hash join operation
-  // INTERSECT and UNION DISTINCT are calculated in this way
+  // INTERSECT is calculated in this way
   if (L::SomeSetOperation::MatchesWithConditionalCast(logical_input, &logical_set_operation)) {
-    if (logical_set_operation->getSetOperationType() !=  L::SetOperation::kUnionAll) {
-      // if set operation type is not UnionAll, build a hash join operator
+    if (logical_set_operation->getSetOperationType() ==  L::SetOperation::kIntersect) {
+      // for intersect operation, map into a hash join operator
       const std::vector<L::LogicalPtr> &operands = logical_set_operation->getOperands();
       L::LogicalPtr left = operands.front(), right;
       if (operands.size() == 2) {
@@ -161,51 +161,27 @@ bool Join::generatePlan(const L::LogicalPtr &logical_input,
       for (const auto & attribute : left->getOutputAttributes()) {
         project_expressions.emplace_back(attribute);
       }
-      if (logical_set_operation->getSetOperationType() == L::SetOperation::kIntersect) {
-        logical_hash_join = L::HashJoin::Create(left,
-                                                right,
-                                                left->getOutputAttributes(),
-                                                right->getOutputAttributes(),
-                                                nullptr /* residual_predicate  */,
-                                                L::HashJoin::JoinType::kLeftSemiJoin);
-        logical_project = L::Project::Create(logical_hash_join,
-                                             project_expressions);
-        P::PhysicalPtr physical_hash_join;
-        addHashJoin(logical_project,
-                    nullptr /* logical_filter  */,
-                    logical_hash_join,
-                    &physical_hash_join);
-        *physical_output = P::Aggregate::Create(physical_hash_join,
-                                               project_expressions,
-                                               {}, /* aggregate_expressions */
-                                               nullptr /* filter_predicate  */);
-      } else if (logical_set_operation->getSetOperationType() == L::SetOperation::kUnion) {
-        logical_hash_join = L::HashJoin::Create(left,
-                                                right,
-                                                left->getOutputAttributes(),
-                                                right->getOutputAttributes(),
-                                                nullptr /* residual_predicate  */,
-                                                L::HashJoin::JoinType::kLeftAntiJoin);
-        logical_project = L::Project::Create(logical_hash_join,
-                                             project_expressions);
-        P::PhysicalPtr physical_hash_join;
-        addHashJoin(logical_project,
-                    nullptr /* logical_filter  */,
-                    logical_hash_join,
-                    &physical_hash_join);
-
-        P::PhysicalPtr left_original =
-          physical_mapper_->createOrGetPhysicalFromLogical(left);
-        P::PhysicalPtr left_aggregated =
-          P::Aggregate::Create(left_original,
-                               project_expressions,
-                               {}, /* aggregate_expressions  */
-                               nullptr /*  filter_predicate */);
-
-        *physical_output = P::InsertSelection::Create(left_aggregated,
-                                                      physical_hash_join);
-      }
+      logical_hash_join = L::HashJoin::Create(left,
+                                              right,
+                                              left->getOutputAttributes(),
+                                              right->getOutputAttributes(),
+                                              nullptr /* residual_predicate  */,
+                                              L::HashJoin::JoinType::kLeftSemiJoin);
+      logical_project = L::Project::Create(logical_hash_join,
+                                           project_expressions);
+      P::PhysicalPtr physical_hash_join;
+      addHashJoin(logical_project,
+                  nullptr /* logical_filter  */,
+                  logical_hash_join,
+                  &physical_hash_join);
+      *physical_output = P::Aggregate::Create(physical_hash_join,
+                                              project_expressions,
+                                              {}, /* aggregate_expressions */
+                                              nullptr /* filter_predicate  */);
       return true;
+    } else {
+      // other kinds of set operations are in OneToOne.cpp
+      return false;
     }
   }
 
