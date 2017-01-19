@@ -1265,6 +1265,9 @@ void ExecutionGenerator::convertUnionAll(
   // add a UnionAll operator
     */
 
+  UnionAllOperator *union_all_operator =
+    new UnionAllOperator(query_handle_->query_id(),
+                         *selection)
 }
 
 void ExecutionGenerator::convertUpdateTable(
