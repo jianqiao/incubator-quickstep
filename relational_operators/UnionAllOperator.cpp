@@ -61,6 +61,33 @@ void UnionAllOperator::doneFeedingInputBlocks(const relation_id rel_id) override
   }
 }
 
+void UnionAllOperator::addWorkOrders(
+    WorkOrdersContainer *container,
+    QueryContext *query_context,
+    StorageManager *storage_manager,
+    InsertDestination *output_destination,
+    std::size_t relation_index) {
+    if (input_relation_is_stored_[relation_index]) {
+      const vector<block_id> &all_blocks = input_relations_block_ids_.at(relation_index);
+      for (const block_id : all_blocks) {
+        container->addNormalWorkOrder(
+            new UnionAllWorkOrder(
+              ));
+      }
+    }
+}
+
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+void UnionAllOperator::addPartitionAwareWorkOrders(
+    WorkOrdersContainer *container,
+    QueryContext *query_context,
+    StorageManager *storage_manager,
+    InsertDestination *output_destination,
+    std::size_t relation_index) {
+
+}
+#endif
+
 bool UnionAllOperator::getAllWorkOrders(
     WorkOrdersContainer *container,
     QueryContext *query_context,

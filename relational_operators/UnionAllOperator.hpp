@@ -130,13 +130,35 @@ class UnionAllOperator : public RelationalOperator {
     return output_relation_;
   }
 
-  void doneFeedingInputBlocks(const relation_id rel_id) override;
+  QueryContext::insert_destination_id getInsertDestinationID() const override {
+    return output_destination_index_;
+  }
+
+  const relation_id getOutputRelationID() const override {
+    return output_relation_.getID();
+  }
 
   void feedInputBlock(const block_id input_block_id,
                       const relation_id input_relation_id) override;
 
   void feedInputBlocks(const relation_id input_relation_id,
                       std::vector<block_id> *input_block_ids) override;
+
+  void doneFeedingInputBlocks(const relation_id rel_id) override;
+
+  void addWorkOrders(WorkOrdersContainer *container,
+                     QueryContext *query_context,
+                     StorageManager *storage_manager,
+                     InsertDestination *output_destination,
+                     std::size_t relation_index);
+
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+  void addPartitionAwareWorkOrders(WorkOrdersContainer *container,
+                                   QueryContext *query_context,
+                                   StorageManager *storage_manager,
+                                   InsertDestination *output_destination,
+                                   std::size_t relation_index);
+#endif
 
   bool getAllWorkOrders(WorkOrdersContainer *container,
                         QueryContext *query_context,
@@ -145,11 +167,6 @@ class UnionAllOperator : public RelationalOperator {
                         tmb::MessageBus *bus) override;
 
   bool getAllWorkOrdersProtos(WorkOrderProtosContainer *container) override;
-
-  void addWorkOrders(WorkOrdersContainer *container,
-                     QueryContext *query_context,
-                     StorageManager *storage_manager,
-                     InsertDestination *output_destination);
 
  private:
 
@@ -192,14 +209,21 @@ class UnionAllWorkOrder : public WorkOrder {
    * @brief Constructor
    */
   UnionAllWorkOrder(const std::size_t query_id,
+                    const CatalogRelationSchema &input_relation,
                     const block_id input_block_id,
+                    InsertDestination *output_destination,
                     StorageManager *storage_manager)
       : WorkOrder(query_id),
+        input_relation_(input_relation),
         input_block_id_(input_block_id),
+        output_destination_(output_destination),
         storage_manager_(storage_manager) {
 
   }
 
+  /**
+   * @brief Constructor for the distributed setting
+   */
   UnionAllWorkOrder(const std::size_t query_id,
                     const block_id input_block_id,
                     StorageManager *storage_manager)
@@ -209,10 +233,16 @@ class UnionAllWorkOrder : public WorkOrder {
 
   }
 
+  ~UnionAllWorkOrder() override {}
+
+  void execute() override;
+
  private:
 
+  const CatalogRelationSchema &input_relation_;
   const block_id input_block_id_;
 
+  InsertDestination *output_destination_;
   StorageManager* storage_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllWorkOrder);
