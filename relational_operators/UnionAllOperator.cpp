@@ -18,6 +18,7 @@
  **/
 
 #include "relational_operators/UnionAllOperator.hpp"
+#include "storage/InsertDestination.hpp"
 
 #include "glog/logging.h"
 
@@ -25,14 +26,60 @@
 
 namespace quickstep {
 
+void UnionAllOperator::feedInputBlock(const block_id input_block_id, const relation_id input_relation_id) override {
+  std::size_t index = relation_id_to_index_.at(input_relation_id);
+  if (input_relations_[index]->hasPartitionScheme()) {
+    const partition_id part_id =
+        input_relations_[index]->getPartitionScheme().getPartitionForBlock(input_block_id);
+    input_relations_block_ids_in_partition_[index][part_id].push_back(input_block_id);
+  } else {
+    input_relations_block_ids_[index].push_back(input_block_id);
+  }
+}
+
+// The TODO of SelectOperator mentions how to optimize this function
+void UnionAllOperator::feedInputBlocks(const relation_id input_relation_id, std::vector<block_id>* input_block_ids) override {
+  std::size_t index = relation_id_to_index_.at(input_relation_id);
+  if (input_relations_.hasPartitionScheme()) {
+    for (auto it = input_block_ids->begin(); it != input_block_ids->end(); ++it) {
+      const partition_id part_id =
+        input_relations_[index]->getPartitionScheme().getPartitionForBlock(*it);
+      input_relations_block_ids_in_partition_[index][part_id].push_back(*it);
+    }
+  } else {
+    input_relations_block_ids_[index].insert(input_relations_block_ids_[index].end(),
+                                             input_block_ids->begin(),
+                                             input_block_ids->end());
+  }
+}
+
+void UnionAllOperator::doneFeedingInputBlocks(const relation_id rel_id) override {
+  DCHECK(still_feeding_.find(rel_id) != still_feeding_.end());
+  still_feeding_.erase(rel_id);
+  if (still_feeding_.size() == 0) {
+    done_feeding_input_relation_ = true;
+  }
+}
+
 bool UnionAllOperator::getAllWorkOrders(
     WorkOrdersContainer *container,
     QueryContext *query_context,
     StorageManager *storage_manager,
     const tmb::client_id scheduler_client_id,
-    tmb::MessageBus *bus) {
+    tmb::MessageBus *bus) override {
   DCHECK(query_context != nullptr);
 
+  InsertDestination *output_destination =
+      query_context->getInsertDestination(output_destination_index_);
+
+  for (std::size_t i=0; i<input_relations_.size(); i++) {
+    if (input_relation_is_stored_[i]) {
+
+    }
+  }
+}
+
+bool UnionAllOperator::getAllWorkOrdersProtos(WorkOrderProtosContainer* container) override {
 
 }
 

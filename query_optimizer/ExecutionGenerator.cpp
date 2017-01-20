@@ -1251,23 +1251,75 @@ void ExecutionGenerator::convertInsertSelection(
 
 void ExecutionGenerator::convertUnionAll(
     const P::UnionAllPtr &physical_unionall) {
-    /*
-  // Create InsertDestination proto
+
+  // The first version of UnionAll, just map into Select operator to test the accuracy
+
+  // Create insert destination proto
   const CatalogRelation *output_relation = nullptr;
-  const QueryContext::insert_destination_id insert_destination_index =
-    query_context_proto_->insert_destinations_size();
+  const  QueryContext::insert_destination_id insert_destination_index =
+      query_context_proto_->insert_destinations_size();
   S::InsertDestination *insert_destination_proto =
-    query_context_proto_->add_insert_destinations();
+      query_context_proto_->add_insert_destinations();
   createTemporaryCatalogRelation(physical_unionall,
                                  &output_relation,
                                  insert_destination_proto);
 
-  // add a UnionAll operator
-    */
+  // Convert predicate, actually no predicate for UnionAll
+  QueryContext::predicate_id execution_predicate_index =
+      QueryContext::kInvalidPredicateId;
 
-  UnionAllOperator *union_all_operator =
-    new UnionAllOperator(query_handle_->query_id(),
-                         *selection)
+  const std::vector<PhysicalPtr> &operands = physical_unionall->operands();
+  for (const auto & operand : operands) {
+    const CatalogRelationInfo *input_relation_info =
+      findRelationInfoOutputByPhysical(operand);
+    DCHECK(input_relation_info != nullptr);
+
+    // Convert project expression proto
+    const QueryContext::scalar_group_id project_expressions_group_index =
+        query_context_proto_->scalar_groups_size();
+    std::vector<expressions::NamedExpressionPtr> project_expressions;
+    for (const auto & attribute : operand->getOutputAttributes()) {
+      project_expressions.emplace_back(attribute);
+    }
+    convertNamedExpressions(project_expressions, query_context_proto_->add_scalar_groups());
+
+    // add operator
+    std::vector<attribute_id> attributes;
+    SelectOperator *union_all_select =
+      convertSimpleProjection(project_expressions_group_index, &attributes)
+      ? new SelectOperator(query_handle_->query_id(),
+                           *input_relation_info->relation,
+                           *output_relation,
+                           insert_destination_index,
+                           execution_predicate_index,
+                           move(attributes),
+                           input_relation_info->isStoredRelation())
+      : new SelectOperator(query_handle_->query_id(),
+                           *input_relation_info->relation,
+                           *output_relation,
+                           insert_destination_index,
+                           execution_predicate_index,
+                           project_expressions_group_index,
+                           input_relation_info->isStoredRelation());
+
+    const QueryPlan::DAGNodeIndex union_all_select_index =
+        execution_plan_->addRelationalOperator(union_all_select);
+    insert_destination_proto->set_relational_op_index(union_all_select_index);
+
+    if (!input_relation_info->isStoredRelation()) {
+      execution_plan_->addDirectDependency(union_all_select_index,
+                                           input_relation_info->producer_operator_index,
+                                           false /* is pipeline breaker  */);
+    }
+  }
+
+  // map physical to relation
+  // how to deal with one relation with multiple operator?
+  physical_to_execution_map_.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(physical_unionall),
+        std::forward_as_tuple())  // multiple index for operator...
+
 }
 
 void ExecutionGenerator::convertUpdateTable(

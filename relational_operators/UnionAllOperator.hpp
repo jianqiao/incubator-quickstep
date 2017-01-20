@@ -21,10 +21,15 @@
 #define QUICKSTEP_RELATIONAL_OPERATORS_UNION_ALL_OPERATOR_HPP_
 
 #include <cstddef>
-#include <string>
-#include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "catalog/CatalogRelation.hpp"
+
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+#include "catalog/NUMAPlacementScheme.hpp"
+#endif
+
 #include "relational_operators/RelationalOperator.hpp"
 #include "utility/Macros.hpp"
 
@@ -60,11 +65,55 @@ class UnionAllOperator : public RelationalOperator {
    * @param database The database to add a relation to.
    **/
   UnionAllOperator(const std::size_t query_id,
-                   const std::vector<CatalogRelation> &input_relations,
-                   const CatalogRelation &output_relation)
+                   const std::vector<CatalogRelation*> &input_relations,
+                   const CatalogRelation &output_relation,
+                   const QueryContext::insert_destination_id output_destination_index,
+                   const std::vector<bool> &input_relation_is_stored)
       : RelationalOperator(query_id),
         input_relations_(input_relations),
-        output_relation_(output_relation) {
+        input_relation_is_stored_(input_relation_is_stored),
+        output_relation_(output_relation),
+        output_destination_index_(output_destination_index),
+        started_(false) {
+    // for every input relation, do the initialization
+    for (std::size_t i=0; i<input_relation.size(); i++) {
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+      placement_schemes_.push_back(input_relations[i]->getNUMAPlacementSchemePtr());
+#endif
+      relation_id_to_index_.emplace(input_relations[i]->getID(), i);
+      if (!input_relation_is_stored[i]) {
+        still_feeding_.add(i);
+      }
+
+      // initialize block_ids and num_workorders with partition
+      input_relations_block_ids_.push_back(input_relation_is_stored[i]
+                                           ? input_relations[i]->getBlocksSnapshot()
+                                           : std::vector<block_id>());
+      num_workorders_generated_.push_back(0);
+
+      // initialize block_ids and num_workorders with partition
+      if (input_relations[i]->hasPartitionScheme()) {
+        const PartitionScheme &part_scheme = input_relations[i]->getPartitionScheme();
+        const PartitionSchemeHeader &part_scheme_header = part_scheme.getPartitionSchemeHeader();
+        const std::size_t num_partitions = part_scheme_header.getNumPartitions();
+
+        input_relations_block_ids_in_partition_.push_back(std::vector<std::vector<block_id>>(num_partitions));
+        num_workorders_generated_in_partition_.push_back(std::vector<std::size_t>(num_partitions, 0));
+
+        std::vector<std::vector<block_id>>& partition = input_relations_block_ids_in_partition_.back();
+        for (std::size_t part_id=0; part_id<num_partitions; part_id++) {
+          if (input_relation_is_stored[i]) {
+            partition[part_id] = part_scheme.getBlocksInPartition(part_id);
+          }  else {
+            partition[part_id] = std::vector<block_id>();
+          }
+        }
+      } else {
+        // if does not have PartitionScheme, push back an empty vector
+        input_relations_block_ids_in_partition_.push_back(std::vector<std::vector<block_id>>());
+        num_workorders_generated_in_partition_.push_back(std::vector<std::size_t>());
+      }
+    }
   }
 
   ~UnionAllOperator() override {}
@@ -73,13 +122,21 @@ class UnionAllOperator : public RelationalOperator {
     return "UnionAll";
   }
 
-  const std::vector<CatalogRelation>& input_relations() const {
+  const std::vector<CatalogRelation*>& input_relations() const {
     return input_relations_;
   }
 
   const CatalogRelation& output_relation() const {
     return output_relation_;
   }
+
+  void doneFeedingInputBlocks(const relation_id rel_id) override;
+
+  void feedInputBlock(const block_id input_block_id,
+                      const relation_id input_relation_id) override;
+
+  void feedInputBlocks(const relation_id input_relation_id,
+                      std::vector<block_id> *input_block_ids) override;
 
   bool getAllWorkOrders(WorkOrdersContainer *container,
                         QueryContext *query_context,
@@ -96,8 +153,29 @@ class UnionAllOperator : public RelationalOperator {
 
  private:
 
-  const std::vector<CatalogRelation> &input_relations_;
+  const std::vector<CatalogRelation*> &input_relations_;
+  const std::vector<bool> &input_relation_is_stored_;
+  // Relations that are not stored, and are still feeding
+  std::unordered_set<std::size_t> still_feeding_;
+
   const CatalogRelation &output_relation_;
+  const QueryContext::insert_destination_id output_destination_index_;
+
+  // block ids, in partition or not
+  std::vector< std::vector<block_id> > input_relations_block_ids_;
+  std::vector< std::vector<std::vector<block_id>> > input_relations_block_ids_in_partition_;
+
+  // number of workorders generated, in partition or not
+  std::vector<std::size_t> num_workorders_generated_;
+  std::vector< std::vector<std::size_t> > num_workorders_generated_in_partition_;
+
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+  std::vector<const NUMAPlacementScheme*> placement_schemes_;
+#endif
+
+  // map from relation_id to index in vector
+  std::unordered_map<const relation_id, std::size_t> relation_id_to_index_;
+  bool started_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllOperator);
 };
