@@ -74,7 +74,7 @@ class UnionAllOperator : public RelationalOperator {
         input_relation_is_stored_(input_relation_is_stored),
         output_relation_(output_relation),
         output_destination_index_(output_destination_index),
-        started_(false) {
+        stored_generated_(false) {
     // for every input relation, do the initialization
     for (std::size_t i=0; i<input_relation.size(); i++) {
 #ifdef QUICKSTEP_HAVE_LIBNUMA
@@ -146,18 +146,20 @@ class UnionAllOperator : public RelationalOperator {
 
   void doneFeedingInputBlocks(const relation_id rel_id) override;
 
-  void addWorkOrders(WorkOrdersContainer *container,
-                     QueryContext *query_context,
-                     StorageManager *storage_manager,
-                     InsertDestination *output_destination,
-                     std::size_t relation_index);
+  void addWorkOrdersSingleRelation(
+          WorkOrdersContainer *container,
+          QueryContext *query_context,
+          StorageManager *storage_manager,
+          InsertDestination *output_destination,
+          std::size_t relation_index);
 
 #ifdef QUICKSTEP_HAVE_LIBNUMA
-  void addPartitionAwareWorkOrders(WorkOrdersContainer *container,
-                                   QueryContext *query_context,
-                                   StorageManager *storage_manager,
-                                   InsertDestination *output_destination,
-                                   std::size_t relation_index);
+  void addPartitionAwareWorkOrdersSingleRelation(
+          WorkOrdersContainer *container,
+          QueryContext *query_context,
+          StorageManager *storage_manager,
+          InsertDestination *output_destination,
+          std::size_t relation_index);
 #endif
 
   bool getAllWorkOrders(WorkOrdersContainer *container,
@@ -170,10 +172,12 @@ class UnionAllOperator : public RelationalOperator {
 
  private:
 
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+  std::vector<const NUMAPlacementScheme*> placement_schemes_;
+#endif
+
   const std::vector<CatalogRelation*> &input_relations_;
   const std::vector<bool> &input_relation_is_stored_;
-  // Relations that are not stored, and are still feeding
-  std::unordered_set<std::size_t> still_feeding_;
 
   const CatalogRelation &output_relation_;
   const QueryContext::insert_destination_id output_destination_index_;
@@ -186,13 +190,13 @@ class UnionAllOperator : public RelationalOperator {
   std::vector<std::size_t> num_workorders_generated_;
   std::vector< std::vector<std::size_t> > num_workorders_generated_in_partition_;
 
-#ifdef QUICKSTEP_HAVE_LIBNUMA
-  std::vector<const NUMAPlacementScheme*> placement_schemes_;
-#endif
+  // Relation indices that are not stored, and are still feeding
+  std::unordered_set<std::size_t> still_feeding_;
+  // If all the stored relations are generated
+  bool stored_generated_;
 
   // map from relation_id to index in vector
   std::unordered_map<const relation_id, std::size_t> relation_id_to_index_;
-  bool started_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllOperator);
 };
@@ -209,7 +213,7 @@ class UnionAllWorkOrder : public WorkOrder {
    * @brief Constructor
    */
   UnionAllWorkOrder(const std::size_t query_id,
-                    const CatalogRelationSchema &input_relation,
+                    const CatalogRelationSchema *input_relation,
                     const block_id input_block_id,
                     InsertDestination *output_destination,
                     StorageManager *storage_manager)
@@ -224,6 +228,8 @@ class UnionAllWorkOrder : public WorkOrder {
   /**
    * @brief Constructor for the distributed setting
    */
+
+  /*
   UnionAllWorkOrder(const std::size_t query_id,
                     const block_id input_block_id,
                     StorageManager *storage_manager)
@@ -232,6 +238,7 @@ class UnionAllWorkOrder : public WorkOrder {
         storage_manager_(storage_manager) {
 
   }
+  */
 
   ~UnionAllWorkOrder() override {}
 
@@ -239,7 +246,7 @@ class UnionAllWorkOrder : public WorkOrder {
 
  private:
 
-  const CatalogRelationSchema &input_relation_;
+  const CatalogRelationSchema *input_relation_;
   const block_id input_block_id_;
 
   InsertDestination *output_destination_;

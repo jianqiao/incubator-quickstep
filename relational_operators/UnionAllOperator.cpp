@@ -61,30 +61,85 @@ void UnionAllOperator::doneFeedingInputBlocks(const relation_id rel_id) override
   }
 }
 
-void UnionAllOperator::addWorkOrders(
+void UnionAllOperator::addWorkOrdersSingleRelation(
     WorkOrdersContainer *container,
     QueryContext *query_context,
     StorageManager *storage_manager,
     InsertDestination *output_destination,
     std::size_t relation_index) {
-    if (input_relation_is_stored_[relation_index]) {
-      const vector<block_id> &all_blocks = input_relations_block_ids_.at(relation_index);
-      for (const block_id : all_blocks) {
-        container->addNormalWorkOrder(
-            new UnionAllWorkOrder(
-              ));
-      }
+  if (input_relation_is_stored_[relation_index]) {
+    const vector<block_id> &all_blocks = input_relations_block_ids_.at(relation_index);
+    for (const block_id input_block_id : all_blocks) {
+      container->addNormalWorkOrder(
+        new UnionAllWorkOrder(
+          query_id_,
+          input_relations_[relation_index],
+          input_block_id,
+          output_destination,
+          storage_manager),
+        op_index_);
     }
+  } else {
+    std::size_t num_generated = num_workorders_generated_[relation_index];
+    const std::vector<block_id> &all_blocks = input_relations_block_ids_[relation_index];
+    while (num_generated < allblock .size()) {
+      container->addNormalWorkOrder(
+        new UnionAllWorkOrder(
+          query_id,
+          input_relations_[relation_index],
+          all_blocks[num_generated],
+          output_destination,
+          storage_manager),
+        op_index_);
+      ++num_generated;
+    }
+    num_workorders_generated_[relation_index] = num_generated;
+  }
 }
 
 #ifdef QUICKSTEP_HAVE_LIBNUMA
-void UnionAllOperator::addPartitionAwareWorkOrders(
+void UnionAllOperator::addPartitionAwareWorkOrdersSingleRelation(
     WorkOrdersContainer *container,
     QueryContext *query_context,
     StorageManager *storage_manager,
     InsertDestination *output_destination,
     std::size_t relation_index) {
-
+  DCHECK(placement_schemes_[relation_index] != nullptr);
+  const std::size_t num_partitions =
+    input_relations_[relation_index]->getPartitionScheme().getPartitionSchemeHeader().getNumPartitions();
+  if (input_relation_is_stored_[relation_index]) {
+    for (std::size_t part_id=0; part_id<num_partitions; part_id++) {
+      const std::vector<block_id> &all_blocks =
+        input_relations_block_ids_in_partition_[relation_index][part_id];
+      for (const block_id input_block_id : all_blocks) {
+        container->addNormalWorkOrder(
+          new UnionAllWorkOrder(
+            query_id_,
+            input_relations_[relation_index],
+            input_block_id,
+            output_destination,
+            storage_manager),
+          op_index_);
+      }
+    }
+  } else {
+    for (std::size_t part_id=0; part_id<num_partitions; part_id++) {
+      std::size_t num_generated = num_workorders_generated_in_partition_[relation_index][part_id];
+      const std::vector<block_id> &all_blocks = input_relations_block_ids_in_partition_[relation_index][part_id];
+      while (num_generated < all_blocks.size()) {
+        container->addNormalWorkOrder(
+          new UnionAllWorkOrder(
+            query_id_,
+            input_relations_[relation_index],
+            all_blocks[num_generated],
+            output_destination,
+            storage_manager),
+          op_index_);
+        ++num_generated;
+      }
+      num_workorders_generated_in_partition_[relation_index][part_id] = num_generated;
+    }
+  }
 }
 #endif
 
@@ -99,14 +154,66 @@ bool UnionAllOperator::getAllWorkOrders(
   InsertDestination *output_destination =
       query_context->getInsertDestination(output_destination_index_);
 
-  for (std::size_t i=0; i<input_relations_.size(); i++) {
-    if (input_relation_is_stored_[i]) {
+  // Generate work orders for all the stored relations
+  // This block of code will only be executed once
+  if (!stored_generated_) {
+    for (std::size_t relation_index=0; relation_index<input_relations_.size(); relation_index++) {
+      if (input_relation_is_stored_[relation_index]) {
+        // Generate work orders for single stored relation
+        if (input_relations_[relation_index]->hasPartitionScheme()) {
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+          if (input_relations_[relation_index]->hasNUMAPlacementScheme()) {
+            addPartitionAwareWorkOrdersSingleRelation(container,
+                                                      query_context,
+                                                      storage_manager,
+                                                      output_destination,
+                                                      relation_index);
+          }
+#endif
+        } else {
+          addWorkOrdersSingleRelation(container,
+                                      query_context,
+                                      storage_manager,
+                                      output_destination,
+                                      relation_index);
+        }
+      }
+    }
+    stored_generated_ = true;
+  }
 
+  // Generate work orders for all the non-stored relations
+  for (std::size_t relation_index=0; relation_index<input_relations_.size(); relation_index++) {
+    if (!input_relation_is_stored_[relation_index]) {
+     if (input_relations_[relation_index]->hasPartitionScheme()) {
+#ifdef QUICKSTEP_HAVE_LIBNUMA
+       if (input_relations_[relation_index]->hasNUMAPlacementScheme()) {
+         addPartitionAwareWorkOrdersSingleRelation(container,
+                                                   query_context,
+                                                   storage_manager,
+                                                   output_destination,
+                                                   relation_index);
+       }
+#endif
+     } else {
+       addWorkOrdersSingleRelation(container,
+                                   query_context,
+                                   storage_manager,
+                                   output_destination,
+                                   relation_index);
+     }
     }
   }
+  return stored_generated_ && done_feeding_input_relation_;
 }
 
 bool UnionAllOperator::getAllWorkOrdersProtos(WorkOrderProtosContainer* container) override {
+
+}
+
+void UnionAllWorkOrder::execute() {
+  BlockReference block(
+    storage_manager_->getBlock(input_block_id_, *input_relation_, getPreferredNUMANodes()[0]));
 
 }
 
