@@ -68,12 +68,14 @@ class UnionAllOperator : public RelationalOperator {
                    const std::vector<CatalogRelation*> &input_relations,
                    const CatalogRelation &output_relation,
                    const QueryContext::insert_destination_id output_destination_index,
-                   const std::vector<bool> &input_relation_is_stored)
+                   const std::vector<bool> &input_relation_is_stored,
+                   const std::vector<std::vector<attribute_id>> &select_attribute_ids)
       : RelationalOperator(query_id),
         input_relations_(input_relations),
         input_relation_is_stored_(input_relation_is_stored),
         output_relation_(output_relation),
         output_destination_index_(output_destination_index),
+        select_attribute_ids_(select_attribute_ids),
         stored_generated_(false) {
     // for every input relation, do the initialization
     for (std::size_t i=0; i<input_relation.size(); i++) {
@@ -190,6 +192,9 @@ class UnionAllOperator : public RelationalOperator {
   std::vector<std::size_t> num_workorders_generated_;
   std::vector< std::vector<std::size_t> > num_workorders_generated_in_partition_;
 
+  // attributes for projection
+  const std::vector< std::vector<attribute_id> > select_attribute_ids_;
+
   // Relation indices that are not stored, and are still feeding
   std::unordered_set<std::size_t> still_feeding_;
   // If all the stored relations are generated
@@ -216,12 +221,14 @@ class UnionAllWorkOrder : public WorkOrder {
                     const CatalogRelationSchema *input_relation,
                     const block_id input_block_id,
                     InsertDestination *output_destination,
-                    StorageManager *storage_manager)
+                    StorageManager *storage_manager,
+                    const std::vector<attribute_id> &select_attribute_id)
       : WorkOrder(query_id),
         input_relation_(input_relation),
         input_block_id_(input_block_id),
         output_destination_(output_destination),
-        storage_manager_(storage_manager) {
+        storage_manager_(storage_manager),
+        select_attribute_id_(select_attribute_id) {
 
   }
 
@@ -251,6 +258,8 @@ class UnionAllWorkOrder : public WorkOrder {
 
   InsertDestination *output_destination_;
   StorageManager* storage_manager_;
+
+  const std::vector<attribute_id> select_attribute_id_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllWorkOrder);
 }

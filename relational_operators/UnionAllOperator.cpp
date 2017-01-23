@@ -76,7 +76,8 @@ void UnionAllOperator::addWorkOrdersSingleRelation(
           input_relations_[relation_index],
           input_block_id,
           output_destination,
-          storage_manager),
+          storage_manager,
+          select_attribute_ids_[relation_index]),
         op_index_);
     }
   } else {
@@ -89,7 +90,8 @@ void UnionAllOperator::addWorkOrdersSingleRelation(
           input_relations_[relation_index],
           all_blocks[num_generated],
           output_destination,
-          storage_manager),
+          storage_manager,
+          select_attribute_ids_[relation_index]),
         op_index_);
       ++num_generated;
     }
@@ -118,7 +120,8 @@ void UnionAllOperator::addPartitionAwareWorkOrdersSingleRelation(
             input_relations_[relation_index],
             input_block_id,
             output_destination,
-            storage_manager),
+            storage_manager,
+            select_attribute_ids_[relation_index]),
           op_index_);
       }
     }
@@ -133,7 +136,8 @@ void UnionAllOperator::addPartitionAwareWorkOrdersSingleRelation(
             input_relations_[relation_index],
             all_blocks[num_generated],
             output_destination,
-            storage_manager),
+            storage_manager,
+            select_attribute_ids_[relation_index]),
           op_index_);
         ++num_generated;
       }
@@ -215,6 +219,9 @@ void UnionAllWorkOrder::execute() {
   BlockReference block(
     storage_manager_->getBlock(input_block_id_, *input_relation_, getPreferredNUMANodes()[0]));
 
+  block->selectSimple(select_attribute_id_,
+                      nullptr,
+                      output_destination_);
 }
 
 }  // namespace quickstep
