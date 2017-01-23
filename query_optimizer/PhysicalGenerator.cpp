@@ -114,12 +114,13 @@ P::PhysicalPtr PhysicalGenerator::optimizePlan() {
   }
 
   for (std::unique_ptr<Rule<P::Physical>> &rule : rules) {
+    std::cerr<< "Apply rule "<< rule->getName() <<std::endl;
     physical_plan_ = rule->apply(physical_plan_);
-    DVLOG(5) << "After applying rule " << rule->getName() << ":\n"
+    std::cerr << "After applying rule " << rule->getName() << ":\n"
              << physical_plan_->toString();
   }
 
-  DVLOG(4) << "Optimized physical plan:\n" << physical_plan_->toString();
+  std::cerr << "Optimized physical plan:\n" << physical_plan_->toString();
 
   if (FLAGS_visualize_plan) {
     quickstep::PlanVisualizer plan_visualizer;

@@ -25,6 +25,7 @@
 #include <unordered_set>
 
 #include "catalog/CatalogRelation.hpp"
+#include "catalog/CatalogTypedefs.hpp"
 
 #ifdef QUICKSTEP_HAVE_LIBNUMA
 #include "catalog/NUMAPlacementScheme.hpp"
@@ -65,7 +66,7 @@ class UnionAllOperator : public RelationalOperator {
    * @param database The database to add a relation to.
    **/
   UnionAllOperator(const std::size_t query_id,
-                   const std::vector<CatalogRelation*> &input_relations,
+                   const std::vector<const CatalogRelation*> &input_relations,
                    const CatalogRelation &output_relation,
                    const QueryContext::insert_destination_id output_destination_index,
                    const std::vector<bool> &input_relation_is_stored,
@@ -78,13 +79,13 @@ class UnionAllOperator : public RelationalOperator {
         select_attribute_ids_(select_attribute_ids),
         stored_generated_(false) {
     // for every input relation, do the initialization
-    for (std::size_t i=0; i<input_relation.size(); i++) {
+    for (std::size_t i=0; i<input_relations.size(); i++) {
 #ifdef QUICKSTEP_HAVE_LIBNUMA
       placement_schemes_.push_back(input_relations[i]->getNUMAPlacementSchemePtr());
 #endif
       relation_id_to_index_.emplace(input_relations[i]->getID(), i);
       if (!input_relation_is_stored[i]) {
-        still_feeding_.add(i);
+        still_feeding_.insert(i);
       }
 
       // initialize block_ids and num_workorders with partition
@@ -124,7 +125,7 @@ class UnionAllOperator : public RelationalOperator {
     return "UnionAll";
   }
 
-  const std::vector<CatalogRelation*>& input_relations() const {
+  const std::vector<const CatalogRelation*>& input_relations() const {
     return input_relations_;
   }
 
@@ -170,7 +171,7 @@ class UnionAllOperator : public RelationalOperator {
                         const tmb::client_id scheduler_client_id,
                         tmb::MessageBus *bus) override;
 
-  bool getAllWorkOrdersProtos(WorkOrderProtosContainer *container) override;
+  bool getAllWorkOrderProtos(WorkOrderProtosContainer *container) override;
 
  private:
 
@@ -178,7 +179,7 @@ class UnionAllOperator : public RelationalOperator {
   std::vector<const NUMAPlacementScheme*> placement_schemes_;
 #endif
 
-  const std::vector<CatalogRelation*> &input_relations_;
+  const std::vector<const CatalogRelation*> &input_relations_;
   const std::vector<bool> &input_relation_is_stored_;
 
   const CatalogRelation &output_relation_;
@@ -201,7 +202,7 @@ class UnionAllOperator : public RelationalOperator {
   bool stored_generated_;
 
   // map from relation_id to index in vector
-  std::unordered_map<const relation_id, std::size_t> relation_id_to_index_;
+  std::unordered_map<relation_id, std::size_t> relation_id_to_index_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllOperator);
 };
@@ -262,7 +263,7 @@ class UnionAllWorkOrder : public WorkOrder {
   const std::vector<attribute_id> select_attribute_id_;
 
   DISALLOW_COPY_AND_ASSIGN(UnionAllWorkOrder);
-}
+};
 
 /** @} */
 

@@ -1263,12 +1263,8 @@ void ExecutionGenerator::convertUnionAll(
                                  &output_relation,
                                  insert_destination_proto);
 
-  // Convert predicate, actually no predicate for UnionAll
-  QueryContext::predicate_id execution_predicate_index =
-      QueryContext::kInvalidPredicateId;
-
-  const std::vector<PhysicalPtr> &operands = physical_unionall->operands();
-  std::vector<CatalogRelation*> input_relations;
+  const std::vector<P::PhysicalPtr> &operands = physical_unionall->operands();
+  std::vector<const CatalogRelation*> input_relations;
   std::vector<bool> is_stored_relation;
   std::vector<std::vector<attribute_id>> select_attribute_ids;
   std::vector<QueryPlan::DAGNodeIndex> dependency_operator_index;
@@ -1300,7 +1296,7 @@ void ExecutionGenerator::convertUnionAll(
                          input_relations,
                          *output_relation,
                          insert_destination_index,
-                         input_relation_is_stored,
+                         is_stored_relation,
                          select_attribute_ids);
 
   const QueryPlan::DAGNodeIndex union_all_index =
@@ -1308,15 +1304,15 @@ void ExecutionGenerator::convertUnionAll(
   insert_destination_proto->set_relational_op_index(union_all_index);
 
   for (std::size_t relation_id=0; relation_id<is_stored_relation.size(); ++relation_id) {
-    if (!input_relation_is_stored[i]) {
+    if (!is_stored_relation[relation_id]) {
       execution_plan_->addDirectDependency(union_all_index,
-                                           producer_operator_index[i],
+                                           dependency_operator_index[relation_id],
                                            false /* is pipeline breaker  */);
     }
   }
 
   // how to deal with one relation with multiple operator?
-  physical_to_execution_map_.emplace(
+  physical_to_output_relation_map_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(physical_unionall),
         std::forward_as_tuple(union_all_index,
