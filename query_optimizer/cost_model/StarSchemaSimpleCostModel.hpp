@@ -36,6 +36,7 @@
 #include "query_optimizer/physical/TableReference.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
 #include "query_optimizer/physical/WindowAggregate.hpp"
+#include "query_optimizer/physical/UnionAll.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
@@ -77,7 +78,7 @@ class StarSchemaSimpleCostModel : public CostModel {
 
   /**
    * @brief Estimate the number of distinct values of an attribute in a relation.
-   * 
+   *
    * @param attribute_id The expression id of the target attribute.
    * @param physical_plan The physical plan of the attribute's relation.
    * @return The estimated number of distinct values for the attribute.
@@ -132,6 +133,9 @@ class StarSchemaSimpleCostModel : public CostModel {
 
   std::size_t estimateCardinalityForWindowAggregate(
       const physical::WindowAggregatePtr &physical_plan);
+
+  std::size_t estimateCardinalityForUnionAll(
+      const physical::UnionAllPtr &physical_plan);
 
   double estimateSelectivityForPredicate(
       const expressions::PredicatePtr &filter_predicate,

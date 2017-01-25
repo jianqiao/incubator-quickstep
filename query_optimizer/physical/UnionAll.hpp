@@ -78,7 +78,26 @@ class UnionAll : public Physical {
   bool maybeCopyWithPrunedExpressions(
       const expressions::UnorderedNamedExpressionSet &referenced_expressions,
       PhysicalPtr *output) const override {
-    return false;
+    std::vector<PhysicalPtr> new_operands;
+    // For UnionAll operation, either all operands are pruned, or non operand is pruned
+    // So use operand0 to see if need to be pruned, then use this to check other operands
+    PhysicalPtr new_operand0;
+    bool return_flag = operands_[0]->maybeCopyWithPrunedExpressions(referenced_expressions, &new_operand0);
+    if (return_flag)
+      new_operands.push_back(new_operand0);
+
+    // Check the rest of the operands
+    for (std::size_t i=1; i<operands_.size(); i++) {
+      PhysicalPtr new_operand;
+      bool ret = operands_[i]->maybeCopyWithPrunedExpressions(referenced_expressions, &new_operand);
+      DCHECK_EQ(return_flag, ret);
+      if (ret)
+        new_operands.push_back(new_operand);
+    }
+
+    if (return_flag)
+      *output = Create(new_operands);
+    return return_flag;
   }
 
   /**
