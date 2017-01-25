@@ -82,7 +82,8 @@ class SetOperation : public Logical {
   std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {
     std::vector<expressions::AttributeReferencePtr> referenced_attributes;
     for (const auto &operand : operands_) {
-      const std::vector<expressions::AttributeReferencePtr> reference = operand->getReferencedAttributes();
+      const std::vector<expressions::AttributeReferencePtr> reference =
+          operand->getOutputAttributes();
       referenced_attributes.insert(referenced_attributes.end(),
                                    reference.begin(),
                                    reference.end());

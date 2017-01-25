@@ -68,9 +68,11 @@ class UnionAll : public Physical {
   std::vector<expressions::AttributeReferencePtr> getReferencedAttributes() const override {
     std::vector<expressions::AttributeReferencePtr> referenced_attributes;
     for (const PhysicalPtr &operand : operands_) {
+      const std::vector<expressions::AttributeReferencePtr> reference =
+          operand->getOutputAttributes();
       referenced_attributes.insert(referenced_attributes.end(),
-                                   operand->getReferencedAttributes().begin(),
-                                   operand->getReferencedAttributes().end());
+                                   reference.begin(),
+                                   reference.end());
     }
     return referenced_attributes;
   }

@@ -110,6 +110,7 @@ void UnionAllOperator::addPartitionAwareWorkOrdersSingleRelation(
     InsertDestination *output_destination,
     std::size_t relation_index) {
   DCHECK(placement_schemes_[relation_index] != nullptr);
+  DCHECK(input_relations_[relation_index]->hasPartitionScheme());
   const std::size_t num_partitions =
     input_relations_[relation_index]->getPartitionScheme().getPartitionSchemeHeader().getNumPartitions();
   if (input_relation_is_stored_[relation_index]) {
@@ -220,7 +221,8 @@ bool UnionAllOperator::getAllWorkOrderProtos(WorkOrderProtosContainer* container
 
 void UnionAllWorkOrder::execute() {
   BlockReference block(
-    storage_manager_->getBlock(input_block_id_, *input_relation_, getPreferredNUMANodes()[0]));
+    storage_manager_->getBlock(input_block_id_, *input_relation_));
+//    storage_manager_->getBlock(input_block_id_, *input_relation_, getPreferredNUMANodes()[0]));
 
   block->selectSimple(select_attribute_id_,
                       nullptr,

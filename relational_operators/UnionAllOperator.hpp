@@ -179,8 +179,8 @@ class UnionAllOperator : public RelationalOperator {
   std::vector<const NUMAPlacementScheme*> placement_schemes_;
 #endif
 
-  const std::vector<const CatalogRelation*> &input_relations_;
-  const std::vector<bool> &input_relation_is_stored_;
+  const std::vector<const CatalogRelation*> input_relations_;
+  const std::vector<bool> input_relation_is_stored_;
 
   const CatalogRelation &output_relation_;
   const QueryContext::insert_destination_id output_destination_index_;
