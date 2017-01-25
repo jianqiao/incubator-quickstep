@@ -34,6 +34,7 @@
 #include "query_optimizer/physical/TableReference.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
 #include "query_optimizer/physical/WindowAggregate.hpp"
+#include "query_optimizer/physical/UnionAll.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
@@ -98,6 +99,11 @@ class SimpleCostModel : public CostModel {
   // Return the estimated cardinality of the input plan.
   std::size_t estimateCardinalityForWindowAggregate(
       const physical::WindowAggregatePtr &physical_plan);
+
+  // Return the estimated cardinality of union all operation,
+  // which is the sum of cardinality of all children operators
+  std::size_t estimateCardinalityForUnionAll(
+      const physical::UnionAllPtr &physical_plan);
 
   const std::vector<physical::PhysicalPtr> &shared_subplans_;
 
