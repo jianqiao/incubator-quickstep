@@ -298,6 +298,7 @@ void RunMerger::mergeSingleColumnNullFirst(ValueAccessor *first_accessor) {
 
       // Check if top-K tuples are already inserted.
       if (check_top_k && (++num_tuples == top_k_)) {
+        std::cerr << "num_tuples = " << num_tuples << "\n";
         return;
       }
 

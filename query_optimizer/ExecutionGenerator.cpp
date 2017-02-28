@@ -1898,6 +1898,8 @@ void ExecutionGenerator::convertSort(const P::SortPtr &physical_sort) {
       std::forward_as_tuple(physical_sort),
       std::forward_as_tuple(merge_run_operator_index,
                             sorted_relation));
+
+  std::cerr << "Sorted relation = " << sorted_relation->getName() << "\n";
 }
 
 void ExecutionGenerator::convertTableGenerator(

@@ -232,6 +232,8 @@ class RunCreator {
       createNewBlock();
       new_block = true;
     }
+    std::cerr << "storage block = " << BlockIdUtil::Counter(storage_block_->getID())
+              << " num tuples = " << storage_block_->getNumTuples() << "\n";
     return new_block;
   }
 
@@ -258,6 +260,10 @@ class RunCreator {
  private:
   inline void createNewBlock() {
     storage_block_ = output_destination_->getBlockForInsertion();
+    std::cerr << "destination = " << output_destination_
+              << " relation = " << storage_block_->getRelation().getName()
+              << " block_id = " << BlockIdUtil::Counter(storage_block_->getID()) << "\n";
+
     DCHECK(storage_block_->getTupleStorageSubBlock().isInsertOrderPreserving())
         << kTupleStorageSubBlockTypeNames[storage_block_
                                               ->getTupleStorageSubBlock()

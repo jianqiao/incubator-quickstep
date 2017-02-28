@@ -153,6 +153,10 @@ WorkOrder *SortMergeRunOperator::createWorkOrder(
                                               ? output_destination_index_
                                               : run_block_destination_index_);
 
+  if (job->is_final_level) {
+    std::cerr << "expected insert destination = " << output_destination << "\n";
+  }
+
   // Create a work order from the merge job from merge tree.
   return new SortMergeRunWorkOrder(
       query_id_,
@@ -178,6 +182,12 @@ bool SortMergeRunOperator::generateWorkOrders(
 
   // Get merge jobs from merge tree.
   bool done_generating = merge_tree_.getMergeJobs(&jobs);
+  if (!jobs.empty()) {
+    std::cerr << "jobs size = " << jobs.size() << "\n";
+  }
+  if (done_generating) {
+    std::cerr << "Done generating!\n";
+  }
 
   for (std::vector<MergeTree::MergeJob>::size_type job_id = 0;
        job_id != jobs.size();
@@ -307,12 +317,15 @@ void SortMergeRunOperator::receiveFeedbackMessage(
 
   // Write the output run to merge tree.
   SortMergeRunOutput run_output(run_output_proto);
+  std::cerr << "feedback received -- "
+            << run_output.getBlocksMutable()->size() << "\n";
   merge_tree_.writeOutputRun(run_output.getMergeLevel(),
                              run_output.getBlocksMutable());
 }
 
 void SortMergeRunWorkOrder::execute() {
   // Merge input runs.
+  std::cerr << "run size -- " << input_runs_.size() << "\n";
   merge_run_operator::RunMerger run_merger(sort_config_,
                                            std::move(input_runs_),
                                            top_k_,

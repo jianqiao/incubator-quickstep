@@ -163,11 +163,14 @@ void PrintToScreen::printTuple(const TupleStorageSubBlock &tuple_store,
 
 std::size_t PrintToScreen::GetNumTuplesInRelation(
     const CatalogRelation &relation, StorageManager *storage_manager) {
-  const std::vector<block_id> &blocks = relation.getBlocksSnapshot();
+  std::cerr << "output relation name = " << relation.getName() << "\n";
+  const std::vector<block_id> blocks = relation.getBlocksSnapshot();
   std::size_t total_num_tuples = 0;
   for (block_id block : blocks) {
     total_num_tuples +=
         storage_manager->getBlock(block, relation)->getNumTuples();
+    std::cerr << "block_id = " << BlockIdUtil::Counter(block)
+              << " output # = " << total_num_tuples << "\n";
   }
   return total_num_tuples;
 }
