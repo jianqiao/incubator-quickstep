@@ -66,6 +66,11 @@
 
 #include "glog/logging.h"
 
+using std::int64_t;
+using std::max;
+using std::min;
+using std::size_t;
+
 namespace quickstep {
 namespace optimizer {
 namespace cost {
@@ -765,6 +770,80 @@ bool StarSchemaSimpleCostModel::canUseTwoPhaseCompactKeyAggregation(
   }
 
   return true;
+}
+
+bool StarSchemaSimpleCostModel::canUseCollisionFreeVectorJoin(const P::HashJoinPtr &hash_join,
+                                                              size_t *num_entries) {
+  // Supports only single join key.
+  if (hash_join->left_join_attributes().size() != 1) {
+    return false;
+  }
+
+  const E::AttributeReferencePtr left_join_key_attr = hash_join->left_join_attributes().front();
+
+  bool min_value_stat_is_exact;
+  bool max_value_stat_is_exact;
+  TypedValue min_value = findMinValueStat(
+          hash_join, left_join_key_attr, &min_value_stat_is_exact);
+  TypedValue max_value = findMaxValueStat(
+          hash_join, left_join_key_attr, &max_value_stat_is_exact);
+  if (min_value.isNull() || max_value.isNull() ||
+      (!min_value_stat_is_exact) || (!max_value_stat_is_exact)) {
+    return false;
+  }
+
+  std::int64_t min_cpp_value;
+  std::int64_t max_cpp_value;
+  switch (left_join_key_attr->getValueType().getTypeID()) {
+    case TypeID::kInt: {
+      min_cpp_value = min_value.getLiteral<int>();
+      max_cpp_value = max_value.getLiteral<int>();
+      break;
+    }
+    case TypeID::kLong: {
+      min_cpp_value = min_value.getLiteral<std::int64_t>();
+      max_cpp_value = max_value.getLiteral<std::int64_t>();
+      break;
+    }
+    default:
+      return false;
+  }
+
+  const E::AttributeReferencePtr right_join_key_attr = hash_join->right_join_attributes().front();
+  min_value = findMinValueStat(hash_join, right_join_key_attr, &min_value_stat_is_exact);
+  max_value = findMaxValueStat(hash_join, right_join_key_attr, &max_value_stat_is_exact);
+  if (min_value.isNull() || max_value.isNull() ||
+      (!min_value_stat_is_exact) || (!max_value_stat_is_exact)) {
+    return false;
+  }
+
+  switch (right_join_key_attr->getValueType().getTypeID()) {
+    case TypeID::kInt: {
+      min_cpp_value = min(min_cpp_value, static_cast<int64_t>(min_value.getLiteral<int>()));
+      max_cpp_value = max(max_cpp_value, static_cast<int64_t>(max_value.getLiteral<int>()));
+      break;
+    }
+    case TypeID::kLong: {
+      min_cpp_value = min(min_cpp_value, min_value.getLiteral<int64_t>());
+      max_cpp_value = max(max_cpp_value, max_value.getLiteral<int64_t>());
+      break;
+    }
+    default:
+      return false;
+  }
+
+  *num_entries = static_cast<std::size_t>(max_cpp_value) + 1;
+
+  LOG(INFO) << "min_cpp_value = " << min_cpp_value
+            << ", max_cpp_value = " << max_cpp_value
+            << ", num_entries = " << *num_entries;
+
+  // TODO(jianqiao):
+  // 1. Handle the case where min_cpp_value is below 0 or far greater than 0.
+  // 2. Reason about the table size bound (e.g. by checking memory size) instead
+  //    of hardcoding it as a gflag.
+  return (min_cpp_value >= 0 &&
+          max_cpp_value < FLAGS_collision_free_vector_table_max_size);
 }
 
 }  // namespace cost
