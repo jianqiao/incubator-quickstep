@@ -59,6 +59,7 @@
 #include "types/containers/ColumnVectorsValueAccessor.hpp"
 #include "types/containers/Tuple.hpp"
 #include "utility/ColumnVectorCache.hpp"
+#include "utility/EventProfiler.hpp"
 #include "utility/lip_filter/LIPFilterAdaptiveProber.hpp"
 
 #include "gflags/gflags.h"
@@ -474,6 +475,10 @@ void AggregationOperationState::aggregateBlock(const block_id input_block,
   std::unique_ptr<ValueAccessor> shared_accessor;
   ValueAccessor *accessor = base_accessor.get();
 
+  auto *container = simple_profiler.getContainer();
+
+  container->startEvent("predicate");
+
   // Apply the predicate first, then the LIPFilters, to generate a TupleIdSequence
   // as the existence map for the tuples.
   std::unique_ptr<TupleIdSequence> matches;
@@ -490,6 +495,10 @@ void AggregationOperationState::aggregateBlock(const block_id input_block,
     accessor = shared_accessor.get();
   }
 
+  container->endEvent("predicate");
+
+  container->startEvent("expression");
+
   std::unique_ptr<ColumnVectorsValueAccessor> non_trivial_results;
   if (!non_trivial_expressions_.empty()) {
     non_trivial_results.reset(new ColumnVectorsValueAccessor());
@@ -503,6 +512,10 @@ void AggregationOperationState::aggregateBlock(const block_id input_block,
     }
   }
 
+  container->endEvent("expression");
+
+  container->startEvent("aggregate");
+
   accessor->beginIterationVirtual();
 
   ValueAccessorMultiplexer accessor_mux(accessor, non_trivial_results.get());
@@ -511,6 +524,8 @@ void AggregationOperationState::aggregateBlock(const block_id input_block,
   } else {
     aggregateBlockHashTable(accessor_mux);
   }
+
+  container->endEvent("aggregate");
 }
 
 void AggregationOperationState::aggregateBlockSingleState(
