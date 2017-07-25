@@ -509,6 +509,21 @@ attribute_id GetAttributeIdFromName(const PtrList<ParseAttributeDefinition> &att
   return kInvalidAttributeID;
 }
 
+E::ScalarPtr SafelyCoerce(const E::ScalarPtr &scalar,
+                          const Type &target_type) {
+  const Type &scalar_type = scalar->getValueType();
+  DCHECK(target_type.isSafelyCoercibleFrom(scalar_type));
+
+  E::ScalarLiteralPtr scalar_literal;
+  if (E::SomeScalarLiteral::MatchesWithConditionalCast(scalar, &scalar_literal)) {
+    return E::ScalarLiteral::Create(
+        target_type.coerceValue(scalar_literal->value(), scalar_type),
+        target_type);
+  }
+
+  return E::Cast::Create(scalar, target_type);
+}
+
 }  // namespace
 
 StorageBlockLayoutDescription* Resolver::resolveBlockProperties(
@@ -2317,6 +2332,9 @@ E::ScalarPtr Resolver::resolveExpression(
       const bool left_is_nulltype = (left_argument->getValueType().getTypeID() == kNullType);
       const bool right_is_nulltype = (right_argument->getValueType().getTypeID() == kNullType);
 
+      const Type &left_type = left_argument->getValueType();
+      const Type &right_type = right_argument->getValueType();
+
       // If either argument is a NULL of unknown type, we try to resolve the
       // type of this BinaryExpression as follows:
       //
@@ -2344,8 +2362,8 @@ E::ScalarPtr Resolver::resolveExpression(
       if (left_is_nulltype || right_is_nulltype) {
         const Type *fixed_result_type
             = parse_binary_scalar.op().resultTypeForPartialArgumentTypes(
-                left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                right_is_nulltype ? nullptr : &(right_argument->getValueType()));
+                left_is_nulltype ? nullptr : &left_type,
+                right_is_nulltype ? nullptr : &right_type);
         if (fixed_result_type != nullptr) {
           return E::ScalarLiteral::Create(fixed_result_type->makeNullValue(),
                                           *fixed_result_type);
@@ -2355,8 +2373,8 @@ E::ScalarPtr Resolver::resolveExpression(
           const Type &nullable_type_hint = type_hint->getNullableVersion();
           if (parse_binary_scalar.op().partialTypeSignatureIsPlausible(
                   &nullable_type_hint,
-                  left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                  right_is_nulltype ? nullptr : &(right_argument->getValueType()))) {
+                  left_is_nulltype ? nullptr : &left_type,
+                  right_is_nulltype ? nullptr : &right_type)) {
             return E::ScalarLiteral::Create(nullable_type_hint.makeNullValue(),
                                             nullable_type_hint);
           }
@@ -2364,8 +2382,8 @@ E::ScalarPtr Resolver::resolveExpression(
 
         if (parse_binary_scalar.op().partialTypeSignatureIsPlausible(
                 nullptr,
-                left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                right_is_nulltype ? nullptr : &(right_argument->getValueType()))) {
+                left_is_nulltype ? nullptr : &left_type,
+                right_is_nulltype ? nullptr : &right_type)) {
           const Type &null_type = TypeFactory::GetType(kNullType, true);
           return E::ScalarLiteral::Create(null_type.makeNullValue(),
                                           null_type);
@@ -2375,12 +2393,18 @@ E::ScalarPtr Resolver::resolveExpression(
         // which should fail.
       }
 
-      if (!parse_binary_scalar.op().canApplyToTypes(left_argument->getValueType(),
-                                                    right_argument->getValueType())) {
-        THROW_SQL_ERROR_AT(&parse_binary_scalar)
-            << "Can not apply binary operation \"" << parse_binary_scalar.op().getName()
-            << "\" to arguments of types " << left_argument->getValueType().getName()
-            << " and " << right_argument->getValueType().getName();
+      if (!parse_binary_scalar.op().canApplyToTypes(left_type, right_type)) {
+        // Try coersion first.
+        if (left_type.isSafelyCoercibleFrom(right_type)) {
+          right_argument = SafelyCoerce(right_argument, left_type);
+        } else if (right_type.isSafelyCoercibleFrom(left_type)) {
+          left_argument = SafelyCoerce(left_argument, right_type);
+        } else {
+          THROW_SQL_ERROR_AT(&parse_binary_scalar)
+              << "Can not apply binary operation \"" << parse_binary_scalar.op().getName()
+              << "\" to arguments of types " << left_argument->getValueType().getName()
+              << " and " << right_argument->getValueType().getName();
+        }
       }
 
       return E::BinaryExpression::Create(parse_binary_scalar.op(),

@@ -3590,7 +3590,7 @@ yyreduce:
   case 34:
 #line 786 "../SqlParser.ypp" /* yacc.c:1661  */
     {
-    (yyval.data_type_) = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDouble));
+    (yyval.data_type_) = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDecimal2));
   }
 #line 3596 "SqlParser_gen.cpp" /* yacc.c:1661  */
     break;
