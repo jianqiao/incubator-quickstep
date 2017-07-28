@@ -48,7 +48,8 @@ namespace quickstep {
 ExecutionDAGVisualizer::ExecutionDAGVisualizer(const QueryPlan &plan) {
   // Do not display these relational operators in the graph.
   std::set<std::string> no_display_op_names =
-      { "DestroyHashOperator", "DropTableOperator" };
+      { "DestroyHashOperator", "DropTableOperator",
+        "DestroyAggregationStateOperator" };
 
   const auto &dag = plan.getQueryPlanDAG();
   num_nodes_ = dag.size();
