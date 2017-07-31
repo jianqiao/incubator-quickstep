@@ -51,6 +51,7 @@
 #include "types/containers/ColumnVector.hpp"
 #include "types/containers/ColumnVectorsValueAccessor.hpp"
 #include "utility/ColumnVectorCache.hpp"
+#include "utility/EventProfiler.hpp"
 #include "utility/lip_filter/LIPFilterAdaptiveProber.hpp"
 #include "utility/lip_filter/LIPFilterUtil.hpp"
 
@@ -470,6 +471,9 @@ void HashInnerJoinWorkOrder::execute() {
   const TupleStorageSubBlock &probe_store = probe_block->getTupleStorageSubBlock();
   std::unique_ptr<ValueAccessor> probe_accessor(probe_store.createValueAccessor());
 
+  auto *container = simple_profiler.getContainer();
+  container->startEvent("hj_lip");
+
   // Probe the LIPFilters to generate an existence bitmap for probe_accessor, if enabled.
   std::unique_ptr<TupleIdSequence> existence_map;
   std::unique_ptr<ValueAccessor> base_accessor;
@@ -481,6 +485,8 @@ void HashInnerJoinWorkOrder::execute() {
         base_accessor->createSharedTupleIdSequenceAdapterVirtual(*existence_map));
   }
 
+  container->endEvent("hj_lip");
+
   if (probe_accessor->getImplementationType() == ValueAccessor::Implementation::kSplitRowStore &&
       output_destination_->getInsertDestinationType() ==
           InsertDestination::InsertDestinationType::kBlockPoolInsertDestination) {
@@ -491,6 +497,9 @@ void HashInnerJoinWorkOrder::execute() {
 }
 
 void HashInnerJoinWorkOrder::executeWithoutCopyElision(ValueAccessor *probe_accessor) {
+  auto *container = simple_profiler.getContainer();
+  container->startEvent("hj_collect");
+
   VectorsOfPairsJoinedTuplesCollector collector;
   if (join_key_attributes_.size() == 1) {
     hash_table_.getAllFromValueAccessor(
@@ -506,8 +515,12 @@ void HashInnerJoinWorkOrder::executeWithoutCopyElision(ValueAccessor *probe_acce
         &collector);
   }
 
+  container->endEvent("hj_collect");
+
   const relation_id build_relation_id = build_relation_.getID();
   const relation_id probe_relation_id = probe_relation_.getID();
+
+  container->startEvent("hj_materialize");
 
   for (std::pair<const block_id, VectorOfTupleIdPair>
            &build_block_entry : *collector.getJoinedTuples()) {
@@ -544,6 +557,7 @@ void HashInnerJoinWorkOrder::executeWithoutCopyElision(ValueAccessor *probe_acce
       build_block_entry.second = std::move(filtered_matches);
     }
 
+    container->startEvent("hj_result");
     ColumnVectorsValueAccessor temp_result;
     std::unique_ptr<ColumnVectorCache> cv_cache = std::make_unique<ColumnVectorCache>();
     for (auto selection_cit = selection_.begin();
@@ -557,12 +571,20 @@ void HashInnerJoinWorkOrder::executeWithoutCopyElision(ValueAccessor *probe_acce
                                                                   cv_cache.get()));
     }
     cv_cache.reset();
+    container->endEvent("hj_result");
 
+    container->startEvent("hj_insert");
     output_destination_->bulkInsertTuples(&temp_result);
+    container->endEvent("hj_insert");
   }
+
+  container->endEvent("hj_materialize");
 }
 
 void HashInnerJoinWorkOrder::executeWithCopyElision(ValueAccessor *probe_accessor) {
+  auto *container = simple_profiler.getContainer();
+  container->startEvent("hjce_collect");
+
   PairsOfVectorsJoinedTuplesCollector collector;
   if (join_key_attributes_.size() == 1) {
     hash_table_.getAllFromValueAccessor(
@@ -578,8 +600,12 @@ void HashInnerJoinWorkOrder::executeWithCopyElision(ValueAccessor *probe_accesso
         &collector);
   }
 
+  container->endEvent("hjce_collect");
+
   const relation_id build_relation_id = build_relation_.getID();
   const relation_id probe_relation_id = probe_relation_.getID();
+
+  container->startEvent("hjce_materialize");
 
   constexpr std::size_t kNumIndexes = 3u;
   constexpr std::size_t kBuildIndex = 0, kProbeIndex = 1u, kTempIndex = 2u;
@@ -654,6 +680,7 @@ void HashInnerJoinWorkOrder::executeWithCopyElision(ValueAccessor *probe_accesso
     // join can still devolve into a cross-product.
 
     // We also need a temp value accessor to store results of any scalar expressions.
+    container->startEvent("hjce_result");
     ColumnVectorsValueAccessor temp_result;
     if (!non_trivial_expressions.empty()) {
       // The getAllValuesForJoin function below needs joined tuple IDs as a
@@ -675,6 +702,9 @@ void HashInnerJoinWorkOrder::executeWithCopyElision(ValueAccessor *probe_accesso
                                                           &cv_cache));
       }
     }
+    container->endEvent("hjce_result");
+
+    container->startEvent("hjce_insert");
 
     // We now create ordered value accessors for both build and probe side,
     // using the joined tuple IDs.
@@ -692,7 +722,11 @@ void HashInnerJoinWorkOrder::executeWithCopyElision(ValueAccessor *probe_accesso
     // avoided by keeping checked-out MutableBlockReferences across iterations
     // of this loop, but that would get messy when combined with partitioning.
     output_destination_->bulkInsertTuplesFromValueAccessors(accessor_attribute_map);
+
+    container->endEvent("hjce_insert");
   }
+
+  container->endEvent("hjce_materialize");
 }
 
 void HashSemiJoinWorkOrder::execute() {
