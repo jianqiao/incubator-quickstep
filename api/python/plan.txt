@@ -1,0 +1,7 @@
+1. Given filtering condition, select all the vertices.
+2. Given filtering condition, select all the edges (together with the vertices).
+3. List vertices and edges, support navigation.
+4. Visualize vertices and edges (as a subgraph).
+5. Navigation: expand neigbours (1 hop, 2 hops).
+6. Session management, temporary tables.
+7. 

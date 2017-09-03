@@ -1880,7 +1880,6 @@ void ExecutionGenerator::convertAggregate(
       use_parallel_initialization = true;
       aggr_state_num_partitions = CalculateNumFinalizationPartitionsForCollisionFreeVectorTable(max_num_groups);
 
-      DCHECK(!group_by_aggrs_info.empty());
       CalculateCollisionFreeAggregationInfo(max_num_groups, group_by_aggrs_info,
                                             aggr_state_proto->mutable_collision_free_vector_info());
     } else {

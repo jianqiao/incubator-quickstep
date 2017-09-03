@@ -1,0 +1,16 @@
+CREATE TABLE r(parent VARCHAR(64), child VARCHAR(64));
+
+INSERT INTO r VALUES('bill', 'mary');
+INSERT INTO r VALUES('mary', 'john');
+...
+...
+...
+
+
+CREATE TABLE s(ancestor VARCHAR(64), offspring VARCHAR(64));
+
+=> ancestor
+
+ancestor('biil', 'mary')
+ancestor('mary', 'john')
+ancestor('bill', 'john')
