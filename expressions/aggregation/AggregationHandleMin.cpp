@@ -53,6 +53,7 @@ AggregationState* AggregationHandleMin::accumulateValueAccessor(
   DCHECK_EQ(1u, argument_ids.size())
       << "Got wrong number of attributes for MIN: " << argument_ids.size();
 
+#ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_SELECTION
   const ValueAccessorSource argument_source = argument_ids.front().source;
   const attribute_id argument_id = argument_ids.front().attr_id;
 
@@ -63,6 +64,9 @@ AggregationState* AggregationHandleMin::accumulateValueAccessor(
       type_.getNullableVersion().makeNullValue(),
       accessor_mux.getValueAccessorBySource(argument_source),
       argument_id));
+#else
+  LOG(FATAL) << "Not supported";
+#endif
 }
 
 void AggregationHandleMin::mergeStates(const AggregationState &source,

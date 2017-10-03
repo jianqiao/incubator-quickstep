@@ -86,6 +86,7 @@ AggregationState* AggregationHandleSum::accumulateValueAccessor(
   DCHECK_EQ(1u, argument_ids.size())
       << "Got wrong number of attributes for SUM: " << argument_ids.size();
 
+#ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_SELECTION
   const ValueAccessorSource argument_source = argument_ids.front().source;
   const attribute_id argument_id = argument_ids.front().attr_id;
 
@@ -100,6 +101,9 @@ AggregationState* AggregationHandleSum::accumulateValueAccessor(
           argument_id,
           &num_tuples);
   return new AggregationStateSum(std::move(va_sum), num_tuples == 0);
+#else
+  LOG(FATAL) << "Not supported";
+#endif
 }
 
 void AggregationHandleSum::mergeStates(const AggregationState &source,

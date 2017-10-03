@@ -95,6 +95,7 @@ AggregationState* AggregationHandleAvg::accumulateValueAccessor(
   DCHECK_EQ(1u, argument_ids.size())
       << "Got wrong number of attributes for AVG: " << argument_ids.size();
 
+#ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_SELECTION
   const ValueAccessorSource argument_source = argument_ids.front().source;
   const attribute_id argument_id = argument_ids.front().attr_id;
 
@@ -111,6 +112,9 @@ AggregationState* AggregationHandleAvg::accumulateValueAccessor(
           &count);
   state->count_ = count;
   return state;
+#else
+  LOG(FATAL) << "Not supported";
+#endif
 }
 
 void AggregationHandleAvg::mergeStates(const AggregationState &source,
