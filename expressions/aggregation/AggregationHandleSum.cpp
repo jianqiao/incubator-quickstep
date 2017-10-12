@@ -26,12 +26,15 @@
 
 #include "catalog/CatalogTypedefs.hpp"
 #include "expressions/aggregation/AggregationID.hpp"
+#include "storage/ValueAccessor.hpp"
 #include "storage/ValueAccessorMultiplexer.hpp"
+#include "storage/ValueAccessorUtil.hpp"
 #include "threading/SpinMutex.hpp"
 #include "types/Type.hpp"
 #include "types/TypeFactory.hpp"
 #include "types/TypeID.hpp"
 #include "types/TypedValue.hpp"
+#include "types/containers/ColumnVector.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
 #include "types/operations/binary_operations/BinaryOperationFactory.hpp"
 #include "types/operations/binary_operations/BinaryOperationID.hpp"
@@ -102,7 +105,77 @@ AggregationState* AggregationHandleSum::accumulateValueAccessor(
           &num_tuples);
   return new AggregationStateSum(std::move(va_sum), num_tuples == 0);
 #else
-  LOG(FATAL) << "Not supported";
+  ValueAccessor *accessor =
+      accessor_mux.getValueAccessorBySource(argument_ids.front().source);
+  const attribute_id attr_id = argument_ids.front().attr_id;
+  const Type &result_type = *result_type_;
+
+  // Dump the code from ScalarAttribute::getAllValues() here ...
+  ColumnVectorPtr column_vector = InvokeOnValueAccessorMaybeTupleIdSequenceAdapter(
+      accessor,
+      [&attr_id, &result_type](auto *accessor) -> ColumnVectorPtr {  // NOLINT(build/c++11)
+    if (NativeColumnVector::UsableForType(result_type)) {
+      NativeColumnVector *result = new NativeColumnVector(result_type,
+                                                          accessor->getNumTuples());
+      accessor->beginIteration();
+      if (result_type.isNullable()) {
+        if (accessor->isColumnAccessorSupported()) {
+          // If ColumnAccessor is supported on the underlying accessor, we have a fast strided
+          // column accessor available for the iteration on the underlying block.
+          // Since the attributes can be null, ColumnAccessor template takes a 'true' argument.
+          std::unique_ptr<const ColumnAccessor<true>>
+              column_accessor(accessor->template getColumnAccessor<true>(attr_id));
+          while (accessor->next()) {
+            const void *value = column_accessor->getUntypedValue();  // Fast strided access.
+            if (value == nullptr) {
+              result->appendNullValue();
+            } else {
+              result->appendUntypedValue(value);
+            }
+          }
+        } else {
+          while (accessor->next()) {
+            const void *value = accessor->template getUntypedValue<true>(attr_id);
+            if (value == nullptr) {
+              result->appendNullValue();
+            } else {
+              result->appendUntypedValue(value);
+            }
+          }
+        }
+      } else {
+        if (accessor->isColumnAccessorSupported()) {
+          // Since the attributes cannot be null, ColumnAccessor template takes a 'false' argument.
+          std::unique_ptr<const ColumnAccessor<false>>
+              column_accessor(accessor->template getColumnAccessor<false>(attr_id));
+          while (accessor->next()) {
+            result->appendUntypedValue(column_accessor->getUntypedValue());  // Fast strided access.
+          }
+        } else {
+          while (accessor->next()) {
+            result->appendUntypedValue(
+                accessor->template getUntypedValue<false>(attr_id));
+          }
+        }
+      }
+      return ColumnVectorPtr(result);
+    } else {
+      IndirectColumnVector *result = new IndirectColumnVector(result_type,
+                                                              accessor->getNumTuples());
+      accessor->beginIteration();
+      while (accessor->next()) {
+        result->appendTypedValue(accessor->getTypedValue(attr_id));
+      }
+      return ColumnVectorPtr(result);
+    }
+  });
+
+  std::size_t num_tuples = 0;
+  TypedValue va_sum =
+      fast_operator_->accumulateColumnVector(blank_state_.sum_,
+                                             *column_vector,
+                                             &num_tuples);
+  return new AggregationStateSum(std::move(va_sum), num_tuples == 0);
 #endif
 }
 
