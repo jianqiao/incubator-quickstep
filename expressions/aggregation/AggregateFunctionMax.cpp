@@ -50,7 +50,7 @@ const Type* AggregateFunctionMax::resultTypeForArgumentTypes(
     return nullptr;
   }
 
-  return &(argument_types.front()->getNullableVersion());
+  return argument_types.front();
 }
 
 AggregationHandle* AggregateFunctionMax::createHandle(
