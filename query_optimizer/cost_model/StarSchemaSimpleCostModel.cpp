@@ -818,7 +818,7 @@ bool StarSchemaSimpleCostModel::canUseCompactKeySeparateChainingAggregation(
     }
     total_key_size += type.maximumByteLength();
   }
-  if (total_key_size > sizeof(std::uint64_t)) {
+  if (total_key_size > 24u) {
     return false;
   }
 

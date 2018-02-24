@@ -23,6 +23,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 #include "catalog/CatalogTypedefs.hpp"
@@ -31,6 +32,7 @@
 #include "storage/StorageConstants.hpp"
 #include "types/Type.hpp"
 #include "types/TypeID.hpp"
+#include "utility/HashPair.hpp"
 #include "utility/Macros.hpp"
 #include "utility/Range.hpp"
 #include "utility/ScopedArray.hpp"
@@ -43,9 +45,51 @@ class AggregationHandle;
 class ColumnVectorsValueAccessor;
 class StorageManager;
 
+template <std::size_t K>
+class CompactKeyCode {
+ public:
+  inline bool operator==(const CompactKeyCode &other) const {
+    return codes_ == other.codes_;
+  }
+
+  inline std::size_t hashCode() const {
+    return computeHash<K-1>();
+  }
+
+ private:
+  template <std::size_t I>
+  inline std::size_t computeHash(typename std::enable_if<I==0>::type * = 0) const {
+    return codes_[0];
+  }
+
+  template <std::size_t I>
+  inline std::size_t computeHash(typename std::enable_if<I!=0>::type * = 0) const {
+    return CombineHashes(computeHash<I-1>(), codes_[I]);
+  }
+
+  std::array<std::uint64_t, K> codes_;
+};
+
 class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase {
  public:
-  CompactKeySeparateChainingHashTable(
+  HashTableImplType getImplType() const override {
+    return HashTableImplType::kCompactKeySeparateChaining;
+  }
+
+  virtual std::size_t getNumInitializationPartitions() const = 0;
+
+  virtual std::size_t getNumFinalizationPartitions() const = 0;
+
+  virtual void initialize(const std::size_t partition_id) = 0;
+
+  virtual void finalizeKeys(const std::size_t partition_id,
+                            ColumnVectorsValueAccessor *output) const = 0;
+};
+
+template <typename KeyCode>
+class CompactKeySeparateChainingHashTableImpl : public CompactKeySeparateChainingHashTable {
+ public:
+  CompactKeySeparateChainingHashTableImpl(
       const std::vector<const Type*> &key_types,
       const std::size_t num_entries,
       const std::vector<AggregationHandle *> &handles,
@@ -58,19 +102,15 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
 
   void destroyPayload() override {}
 
-  HashTableImplType getImplType() const override {
-    return HashTableImplType::kCompactKeySeparateChaining;
-  }
-
   std::size_t getMemoryConsumptionBytes() const override {
     return kSlotDataSize * num_slots_ + kKeyBucketDataSize * num_key_buckets_;
   }
 
-  inline std::size_t getNumInitializationPartitions() const {
+  std::size_t getNumInitializationPartitions() const override {
     return slots_init_splitter_->getNumPartitions();
   }
 
-  inline std::size_t getNumFinalizationPartitions() const {
+  std::size_t getNumFinalizationPartitions() const override {
     if (final_splitter_ == nullptr) {
       final_splitter_ = std::make_unique<RangeSplitter>(
           RangeSplitter::CreateWithPartitionLength(
@@ -80,7 +120,7 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
     return final_splitter_->getNumPartitions();
   }
 
-  void initialize(const std::size_t partition_id) {
+  void initialize(const std::size_t partition_id) override {
     const Range slots_range = slots_init_splitter_->getPartition(partition_id);
     std::memset(slots_.get() + slots_range.begin(),
                 0,
@@ -94,7 +134,7 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
   }
 
   void finalizeKeys(const std::size_t partition_id,
-                    ColumnVectorsValueAccessor *output) const;
+                    ColumnVectorsValueAccessor *output) const override;
 
  private:
   inline static std::size_t CacheLineAlignedBytes(const std::size_t actual_bytes) {
@@ -119,10 +159,9 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
     return std::max(1uL, std::min(num_entries / kFinalizeSegmentSize, 80uL));
   }
 
-  using KeyCode = std::uint64_t;
   using BucketIndex = std::uint32_t;
 
-  inline BucketIndex locateBucketInternal(const KeyCode key_code);
+  inline BucketIndex locateBucketInternal(const KeyCode &key_code);
 
   template <typename ValueAccessorT>
   inline void constructCompactKeyCodeComponent(const std::size_t num_tuples,
@@ -158,15 +197,27 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
   std::unique_ptr<RangeSplitter> key_buckets_init_splitter_;
   mutable std::unique_ptr<RangeSplitter> final_splitter_;
 
-  DISALLOW_COPY_AND_ASSIGN(CompactKeySeparateChainingHashTable);
+  DISALLOW_COPY_AND_ASSIGN(CompactKeySeparateChainingHashTableImpl);
 };
+
+class CompactKeySeparateChainingHashTableFactory {
+ public:
+  static AggregationStateHashTableBase* Create(
+      const std::vector<const Type*> &key_types,
+      const std::size_t num_entries,
+      const std::vector<AggregationHandle *> &handles,
+      StorageManager *storage_manager);
+};
+
 
 // ----------------------------------------------------------------------------
 // Implementations of class methods follow.
 
-inline CompactKeySeparateChainingHashTable::BucketIndex
-    CompactKeySeparateChainingHashTable::locateBucketInternal(const KeyCode key_code) {
-  std::atomic<BucketIndex> *pending_chain = &slots_[key_code % num_slots_];
+template <typename KeyCode>
+inline typename CompactKeySeparateChainingHashTableImpl<KeyCode>::BucketIndex
+    CompactKeySeparateChainingHashTableImpl<KeyCode>::locateBucketInternal(
+        const KeyCode &key_code) {
+  std::atomic<BucketIndex> *pending_chain = &slots_[key_code.hashCode() % num_slots_];
 
   for (;;) {
     BucketIndex existing_chain = 0;
@@ -212,8 +263,9 @@ inline CompactKeySeparateChainingHashTable::BucketIndex
   }
 }
 
+template <typename KeyCode>
 template <typename ValueAccessorT>
-inline void CompactKeySeparateChainingHashTable
+inline void CompactKeySeparateChainingHashTableImpl<KeyCode>
     ::constructCompactKeyCodeComponent(const std::size_t num_tuples,
                                        const std::size_t offset,
                                        const std::size_t key_size,

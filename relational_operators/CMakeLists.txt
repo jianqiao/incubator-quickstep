@@ -594,6 +594,9 @@ target_link_libraries(quickstep_relationaloperators_TransitiveClosureOperator
                       quickstep_relationaloperators_WorkOrder_proto
                       quickstep_storage_StorageBlockInfo
                       quickstep_storage_TransitiveClosureState
+                      quickstep_types_IntType
+                      quickstep_types_containers_ColumnVector
+                      quickstep_types_containers_ColumnVectorsValueAccessor
                       quickstep_utility_BitVector
                       quickstep_utility_Macros
                       quickstep_utility_Range

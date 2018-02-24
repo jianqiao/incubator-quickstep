@@ -77,7 +77,8 @@ inline auto InvokeOnKeySize(const std::size_t key_size,
 
 }  // namespace
 
-CompactKeySeparateChainingHashTable::CompactKeySeparateChainingHashTable(
+template <typename KeyCode>
+CompactKeySeparateChainingHashTableImpl<KeyCode>::CompactKeySeparateChainingHashTableImpl(
     const std::vector<const Type*> &key_types,
     const std::size_t num_entries,
     const std::vector<AggregationHandle *> &handles,
@@ -120,7 +121,8 @@ CompactKeySeparateChainingHashTable::CompactKeySeparateChainingHashTable(
           0, num_key_buckets_, slots_init_splitter_->getNumPartitions()));
 }
 
-bool CompactKeySeparateChainingHashTable::upsertValueAccessorCompositeKey(
+template <typename KeyCode>
+bool CompactKeySeparateChainingHashTableImpl<KeyCode>::upsertValueAccessorCompositeKey(
     const std::vector<std::vector<MultiSourceAttributeId>> &argument_ids,
     const std::vector<MultiSourceAttributeId> &key_attr_ids,
     const ValueAccessorMultiplexer &accessor_mux) {
@@ -163,7 +165,8 @@ bool CompactKeySeparateChainingHashTable::upsertValueAccessorCompositeKey(
   return true;
 }
 
-void CompactKeySeparateChainingHashTable::finalizeKeys(
+template <typename KeyCode>
+void CompactKeySeparateChainingHashTableImpl<KeyCode>::finalizeKeys(
     const std::size_t partition_id,
     ColumnVectorsValueAccessor *output) const {
   DCHECK(final_splitter_ != nullptr);
@@ -191,5 +194,30 @@ void CompactKeySeparateChainingHashTable::finalizeKeys(
     offset += key_sizes_[i];
   }
 }
+
+AggregationStateHashTableBase* CompactKeySeparateChainingHashTableFactory::Create(
+    const std::vector<const Type*> &key_types,
+    const std::size_t num_entries,
+    const std::vector<AggregationHandle *> &handles,
+    StorageManager *storage_manager) {
+  std::size_t total_key_size = 0;
+  for (const Type *key_type : key_types) {
+    total_key_size += key_type->maximumByteLength();
+  }
+
+  if (total_key_size <= 8u) {
+    return new CompactKeySeparateChainingHashTableImpl<CompactKeyCode<1u>>(
+        key_types, num_entries, handles, storage_manager);
+  } else if (total_key_size <= 16u) {
+    return new CompactKeySeparateChainingHashTableImpl<CompactKeyCode<2u>>(
+        key_types, num_entries, handles, storage_manager);
+  } else if (total_key_size <= 24u) {
+    return new CompactKeySeparateChainingHashTableImpl<CompactKeyCode<3u>>(
+        key_types, num_entries, handles, storage_manager);
+  }
+
+  LOG(FATAL) << "Not supported";
+}
+
 
 }  // namespace quickstep

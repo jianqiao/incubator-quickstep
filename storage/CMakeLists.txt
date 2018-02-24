@@ -493,10 +493,11 @@ target_link_libraries(quickstep_storage_CompactKeySeparateChainingHashTable
                       quickstep_types_TypeID
                       quickstep_types_containers_ColumnVector
                       quickstep_types_containers_ColumnVectorsValueAccessor
+                      quickstep_utility_HashPair
+                      quickstep_utility_Macros
                       quickstep_utility_PrimeNumber
                       quickstep_utility_Range
-                      quickstep_utility_ScopedArray
-                      quickstep_utility_Macros)
+                      quickstep_utility_ScopedArray)
 target_link_libraries(quickstep_storage_CompressedBlockBuilder
                       quickstep_catalog_CatalogAttribute
                       quickstep_catalog_CatalogRelationSchema
