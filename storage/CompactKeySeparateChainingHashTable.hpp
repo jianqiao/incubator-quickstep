@@ -161,6 +161,17 @@ class CompactKeySeparateChainingHashTable : public AggregationStateHashTableBase
   DISALLOW_COPY_AND_ASSIGN(CompactKeySeparateChainingHashTable);
 };
 
+
+class CompactKeySeparateChainingHashTableFactory {
+ public:
+  static AggregationStateHashTableBase* Create(
+      const std::vector<const Type*> &key_types,
+      const std::size_t num_entries,
+      const std::vector<AggregationHandle *> &handles,
+      StorageManager *storage_manager);
+};
+
+
 // ----------------------------------------------------------------------------
 // Implementations of class methods follow.
 

@@ -373,7 +373,7 @@ class AggregationStateHashTableFactory {
         return new CollisionFreeVectorTable(
             key_types.front(), num_entries, handles, storage_manager);
       case HashTableImplType::kCompactKeySeparateChaining:
-        return new CompactKeySeparateChainingHashTable(
+        return CompactKeySeparateChainingHashTableFactory::Create(
             key_types, num_entries, handles, storage_manager);
       case HashTableImplType::kSeparateChaining:
         return new PackedPayloadHashTable(

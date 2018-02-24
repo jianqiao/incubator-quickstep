@@ -192,4 +192,24 @@ void CompactKeySeparateChainingHashTable::finalizeKeys(
   }
 }
 
+AggregationStateHashTableBase* CompactKeySeparateChainingHashTableFactory::Create(
+    const std::vector<const Type*> &key_types,
+    const std::size_t num_entries,
+    const std::vector<AggregationHandle *> &handles,
+    StorageManager *storage_manager) {
+  std::size_t total_key_size = 0;
+  for (const Type *key_type : key_types) {
+    total_key_size += key_type->maximumByteLength();
+  }
+
+  if (total_key_size > 8u) {
+    LOG(FATAL) << "Not supported";
+  }
+
+  return new CompactKeySeparateChainingHashTable(
+      key_types, num_entries, handles, storage_manager);
+}
+
+
+
 }  // namespace quickstep
