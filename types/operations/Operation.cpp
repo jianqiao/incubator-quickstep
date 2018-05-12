@@ -19,6 +19,10 @@
 
 #include "types/operations/Operation.hpp"
 
+#include <string>
+
+#include "types/operations/OperationSignature.hpp"
+
 namespace quickstep {
 
 const char *Operation::kOperationSuperTypeNames[] = {
@@ -26,5 +30,24 @@ const char *Operation::kOperationSuperTypeNames[] = {
   "UnaryOperation",
   "BinaryOperation"
 };
+
+std::vector<OperationSignatureLitePtr> Operation::getSignatures() const {
+  LOG(FATAL) << "Not implemented";
+}
+
+bool Operation::canApplyToSignature(const OperationSignaturePtr &signature,
+                                    std::string *diagnostic_message) const {
+  LOG(FATAL) << "Not implemented";
+}
+
+bool Operation::canApplyToSignature(const OperationSignaturePtr &signature) const {
+  std::string dumb_message;
+  return canApplyToSignature(signature, &dumb_message);
+}
+
+const Type& Operation::resultTypeForSignature(
+    const OperationSignaturePtr &signature) const {
+  LOG(FATAL) << "Not implemented";
+}
 
 }  // namespace quickstep

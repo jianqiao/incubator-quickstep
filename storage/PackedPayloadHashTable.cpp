@@ -41,7 +41,7 @@
 #include "utility/Alignment.hpp"
 #include "utility/Macros.hpp"
 #include "utility/PrimeNumber.hpp"
-#include "utility/TemplateUtil.hpp"
+#include "utility/meta/MultipleDispatcher.hpp"
 
 #include "glog/logging.h"
 
@@ -247,13 +247,13 @@ bool PackedPayloadHashTable::upsertValueAccessorCompositeKey(
     derived_accessor->beginIterationVirtual();
   }
 
-  return InvokeOnBools(
+  return meta::BoolDispatcher::repeat<2>::InvokeOn(
       handles_.empty(),
       !all_keys_inline_,
-      [&](auto key_only,  // NOLINT(build/c++11)
-          auto has_variable_size) -> bool {
-    constexpr bool key_only_v = decltype(key_only)::value;
-    constexpr bool has_variable_size_v = decltype(has_variable_size)::value;
+      [&](auto typelist) -> bool {
+    using Params = decltype(typelist);
+    constexpr bool key_only_v = Params::template at<0>::value;
+    constexpr bool has_variable_size_v = Params::template at<1>::value;
 
     if (derived_accessor == nullptr) {
       return this->upsertValueAccessorCompositeKeyInternal<

@@ -44,11 +44,11 @@ class DatetimeType : public Type {
  public:
   typedef DatetimeLit cpptype;
 
-  static const TypeID kStaticTypeID = kDatetime;
+  static constexpr TypeID kStaticTypeID = kDatetime;
+  static constexpr MemoryLayout kMemoryLayout = kCxxInlinePod;
 
   /**
-   * @brief Get a reference to the non-nullable singleton instance of this
-   *        Type.
+   * @brief Get a reference to the non-nullable singleton instance of this Type.
    *
    * @return A reference to the non-nullable singleton instance of this Type.
    **/

@@ -29,7 +29,7 @@
 #include "types/operations/comparisons/ComparisonID.hpp"
 #include "types/operations/comparisons/PatternMatchingComparators.hpp"
 #include "types/operations/comparisons/PatternMatchingComparators-inl.hpp"
-#include "utility/TemplateUtil.hpp"
+#include "utility/meta/MultipleDispatcher.hpp"
 
 #include "glog/logging.h"
 
@@ -56,7 +56,7 @@ const PatternMatchingComparison& PatternMatchingComparison::Instance(const Compa
     }
     default:
       LOG(FATAL) << "Invalid ComparisonID: "
-                 << kComparisonNames[static_cast<typename std::underlying_type<ComparisonID>::type>(sub_type)]
+                 << kComparisonNames[static_cast<std::size_t>(sub_type)]
                  << " for PatternMatchinComparison::Instance()";
   }
 
@@ -70,30 +70,29 @@ bool PatternMatchingComparison::canCompareTypes(const Type &left,
           && (right.getTypeID() == TypeID::kChar || right.getTypeID() == TypeID::kVarChar));
 }
 
-bool PatternMatchingComparison::canComparePartialTypes(const Type *left_type,
-                                                       const Type *right_type) const {
+bool PatternMatchingComparison::canComparePartialTypes(
+    const Type *left_type, const Type *right_type) const {
   return false;
 }
 
-bool PatternMatchingComparison::compareTypedValuesChecked(const TypedValue &left,
-                                                          const Type &left_type,
-                                                          const TypedValue &right,
-                                                          const Type &right_type) const {
+bool PatternMatchingComparison::compareTypedValuesChecked(
+    const TypedValue &left, const Type &left_type,
+    const TypedValue &right, const Type &right_type) const {
   std::unique_ptr<UncheckedComparator> comparator(
       makeUncheckedComparatorForTypes(left_type, right_type));
   return comparator->compareTypedValues(left, right);
 }
 
-UncheckedComparator* PatternMatchingComparison::makeUncheckedComparatorForTypes(const Type &left,
-                                                                                const Type &right) const {
+UncheckedComparator* PatternMatchingComparison::makeUncheckedComparatorForTypes(
+    const Type &left, const Type &right) const {
   DCHECK(canCompareTypes(left, right));
 
   // Configure parameters for the pattern matching comparator.
   const bool left_null_terminated = (left.getTypeID() == TypeID::kVarChar);
   const bool right_null_terminated = (right.getTypeID() == TypeID::kVarChar);
 
-  const std::size_t left_max_length = left.maximumByteLength() - (left_null_terminated ? 1 : 0);
-  const std::size_t right_max_length = right.maximumByteLength() - (right_null_terminated ? 1 : 0);
+  const std::size_t left_max_length = left.maximumByteLength() - left_null_terminated;
+  const std::size_t right_max_length = right.maximumByteLength() - right_null_terminated;
 
   bool is_like_pattern;
   bool is_negation;
@@ -121,11 +120,18 @@ UncheckedComparator* PatternMatchingComparison::makeUncheckedComparatorForTypes(
                  << " in PatternMatchinComparison::makeUncheckedComparatorForTypes()";
   }
 
-  return CreateBoolInstantiatedInstance<PatternMatchingUncheckedComparator, UncheckedComparator>(
-      std::forward_as_tuple(left_max_length, right_max_length),
+  return meta::BoolDispatcher::repeat<4>::InvokeOn(
       is_like_pattern, is_negation,
-      left.isNullable(), right.isNullable());
-}
+      left.isNullable(), right.isNullable(),
+      [&](auto typelist) -> UncheckedComparator* {
+    using Params = decltype(typelist);
 
+    return new PatternMatchingUncheckedComparator<
+        Params::template at<0>::value,
+        Params::template at<1>::value,
+        Params::template at<2>::value,
+        Params::template at<3>::value>(left_max_length, right_max_length);
+  });
+}
 
 }  // namespace quickstep

@@ -17,31 +17,34 @@
  * under the License.
  **/
 
-#include "types/operations/unary_operations/UnaryOperation.hpp"
+#ifndef QUICKSTEP_TYPES_CAST_UTIL_HPP_
+#define QUICKSTEP_TYPES_CAST_UTIL_HPP_
 
-#include "types/operations/Operation.pb.h"
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
+#include "types/Type.hpp"
+#include "types/TypeID.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
 
-serialization::UnaryOperation UnaryOperation::getProto() const {
-  serialization::UnaryOperation proto;
-  switch (operation_id_) {
-    case UnaryOperationID::kNegate:
-      proto.set_operation_id(serialization::UnaryOperation::NEGATE);
-      break;
-    case UnaryOperationID::kCast:
-      FATAL_ERROR("Must use the overridden NumericCastOperation::getProto");
-    case UnaryOperationID::kDateExtract:
-      FATAL_ERROR("Must use the overridden DateExtractOperation::getProto");
-    case UnaryOperationID::kSubstring:
-      FATAL_ERROR("Must use the overridden SubstringOperation::getProto");
-    default:
-      FATAL_ERROR("Unrecognized UnaryOperationID in UnaryOperation::getProto");
-  }
+/** \addtogroup Types
+ *  @{
+ */
 
-  return proto;
-}
+class CastUtil {
+ public:
+  static bool IsSafelyCoercible(const TypeID source_type_id,
+                                const TypeID target_type_id);
+
+  static const Type& CoerceType(const Type &source_type,
+                                const TypeID target_type_id);
+
+ private:
+  CastUtil() {}
+
+  DISALLOW_COPY_AND_ASSIGN(CastUtil);
+};
+
 
 }  // namespace quickstep
+
+#endif  // QUICKSTEP_TYPES_CAST_UTIL_HPP_

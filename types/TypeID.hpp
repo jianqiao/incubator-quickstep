@@ -21,15 +21,22 @@
 #define QUICKSTEP_TYPES_TYPE_ID_HPP_
 
 #include <cstddef>
+#include <cstdint>
+
+#include "types/Type.pb.h"
 
 namespace quickstep {
+
+/** \addtogroup Types
+ *  @{
+ */
 
 /**
  * @brief Concrete Types.
  *
  * @note TypedValue assumes that this doesn't exceed 64 TypeIDs.
  **/
-enum TypeID {
+enum TypeID : std::uint32_t {
   kInt = 0,
   kLong,
   kFloat,
@@ -42,6 +49,16 @@ enum TypeID {
   kYearMonthInterval,
   kNullType,
   kNumTypeIDs  // Not a real TypeID, exists for counting purposes.
+};
+
+/**
+ * @brief Memory layout of a Type's values.
+ **/
+enum MemoryLayout {
+  kCxxInlinePod = 0,
+  kParInlinePod,
+  kParOutOfLinePod,
+  kCxxGeneric
 };
 
 /**
@@ -64,6 +81,40 @@ struct TypeSignature {
  * @note Defined out-of-line in TypeID.cpp
  **/
 extern const char *kTypeNames[kNumTypeIDs];
+
+/**
+ * @brief Serialize a TypeID as Protocol Buffer.
+ *
+ * @param type_id The TypeID to serialize.
+ * @return The Protocol Buffer representation of the TypeID.
+ */
+inline serialization::TypeID GetTypeIDProto(const TypeID type_id) {
+  serialization::TypeID proto;
+  proto.set_id(type_id);
+  return proto;
+}
+
+/**
+ * @brief Reconstruct a TypeID from the serialized Protocol Buffer representation.
+ *
+ * @param proto A serialized Protocol Buffer representation of a TypeID.
+ * @return The reconstructed TypeID.
+ */
+inline TypeID ReconstructTypeIDFromProto(const serialization::TypeID &proto) {
+  return static_cast<TypeID>(proto.id());
+}
+
+/**
+ * @brief Checked whether a serialization::TypeID is valid.
+ *
+ * @param proto A serialized Protocol Buffer representation of a TypeID.
+ * @return True if proto is valid, false otherwise.
+ */
+inline bool TypeIDProtoIsValid(const serialization::TypeID &proto) {
+  return proto.id() < kNumTypeIDs;
+}
+
+/** @} */
 
 }  // namespace quickstep
 

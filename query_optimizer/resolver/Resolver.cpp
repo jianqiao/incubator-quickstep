@@ -121,12 +121,11 @@
 #include "types/Type.hpp"
 #include "types/TypedValue.hpp"
 #include "types/TypeFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperation.hpp"
+#include "types/operations/Operation.hpp"
+#include "types/operations/OperationFactory.hpp"
 #include "types/operations/comparisons/Comparison.hpp"
 #include "types/operations/comparisons/ComparisonFactory.hpp"
 #include "types/operations/comparisons/ComparisonID.hpp"
-#include "types/operations/unary_operations/DateExtractOperation.hpp"
-#include "types/operations/unary_operations/SubstringOperation.hpp"
 #include "types/operations/unary_operations/UnaryOperation.hpp"
 #include "utility/BulkIoConfiguration.hpp"
 #include "utility/PtrList.hpp"
@@ -2466,109 +2465,6 @@ E::ScalarPtr Resolver::resolveExpression(
           parse_attribute_scalar.attr_name(),
           parse_attribute_scalar.rel_name());
     }
-    case ParseExpression::kBinaryExpression: {
-      const ParseBinaryExpression &parse_binary_scalar =
-          static_cast<const ParseBinaryExpression&>(parse_expression);
-
-      std::pair<const Type*, const Type*> argument_type_hints
-          = parse_binary_scalar.op().pushDownTypeHint(type_hint);
-
-      ExpressionResolutionInfo left_resolution_info(
-          *expression_resolution_info);
-      E::ScalarPtr left_argument = resolveExpression(
-          *parse_binary_scalar.left_operand(),
-           argument_type_hints.first,
-           &left_resolution_info);
-
-      ExpressionResolutionInfo right_resolution_info(
-          *expression_resolution_info);
-      E::ScalarPtr right_argument = resolveExpression(
-          *parse_binary_scalar.right_operand(),
-          argument_type_hints.second,
-          &right_resolution_info);
-
-      if (left_resolution_info.hasAggregate()) {
-        expression_resolution_info->parse_aggregate_expression =
-            left_resolution_info.parse_aggregate_expression;
-      } else if (right_resolution_info.hasAggregate()) {
-        expression_resolution_info->parse_aggregate_expression =
-            right_resolution_info.parse_aggregate_expression;
-      }
-
-      // Check if either argument is a NULL literal of an unknown type.
-      const bool left_is_nulltype = (left_argument->getValueType().getTypeID() == kNullType);
-      const bool right_is_nulltype = (right_argument->getValueType().getTypeID() == kNullType);
-
-      // If either argument is a NULL of unknown type, we try to resolve the
-      // type of this BinaryExpression as follows:
-      //
-      //     1. If there is only one possible result type for the expression
-      //        based on what is known about its argument types, then the
-      //        result is a NULL of that type.
-      //     2. Otherwise, if there is a type hint for the BinaryExpression's
-      //        result, and if it is a plausible result type based on what we
-      //        know about argument types, then the result is a NULL of the
-      //        hint type.
-      //     3. Otherwise, check if the BinaryExpression can plausibly be
-      //        applied to the known argument types at all. If so, then the
-      //        result is a NULL of unknown type (i.e. NullType).
-      //     4. If all of the above steps fail, then the BinaryExpression is
-      //        not possibly applicable to the given arguments.
-      //
-      // NOTE(chasseur): Step #3 above does not completely capture knowledge
-      // about the result type of a BinaryExpression with one or more unknown
-      // arguments. For instance, DivideBinaryOperation can never return a
-      // DateTime or any string type, so even if we do not know its specific
-      // return type, we do know that there are some restrictions on what it
-      // may be. However, NullType is implicitly convertable to ANY Type, so
-      // such restrictions could be violated if a parent node in the expression
-      // tree converts a value of NullType to something that it shouldn't be.
-      if (left_is_nulltype || right_is_nulltype) {
-        const Type *fixed_result_type
-            = parse_binary_scalar.op().resultTypeForPartialArgumentTypes(
-                left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                right_is_nulltype ? nullptr : &(right_argument->getValueType()));
-        if (fixed_result_type != nullptr) {
-          return E::ScalarLiteral::Create(fixed_result_type->makeNullValue(),
-                                          *fixed_result_type);
-        }
-
-        if (type_hint != nullptr) {
-          const Type &nullable_type_hint = type_hint->getNullableVersion();
-          if (parse_binary_scalar.op().partialTypeSignatureIsPlausible(
-                  &nullable_type_hint,
-                  left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                  right_is_nulltype ? nullptr : &(right_argument->getValueType()))) {
-            return E::ScalarLiteral::Create(nullable_type_hint.makeNullValue(),
-                                            nullable_type_hint);
-          }
-        }
-
-        if (parse_binary_scalar.op().partialTypeSignatureIsPlausible(
-                nullptr,
-                left_is_nulltype ? nullptr : &(left_argument->getValueType()),
-                right_is_nulltype ? nullptr : &(right_argument->getValueType()))) {
-          const Type &null_type = TypeFactory::GetType(kNullType, true);
-          return E::ScalarLiteral::Create(null_type.makeNullValue(),
-                                          null_type);
-        }
-
-        // If nothing above worked, fall through to canApplyToTypes() below,
-        // which should fail.
-      }
-
-      if (!parse_binary_scalar.op().canApplyToTypes(left_argument->getValueType(),
-                                                    right_argument->getValueType())) {
-        THROW_SQL_ERROR_AT(&parse_binary_scalar)
-            << "Can not apply binary operation \"" << parse_binary_scalar.op().getName()
-            << "\" to arguments of types " << left_argument->getValueType().getName()
-            << " and " << right_argument->getValueType().getName();
-      }
-
-      return E::BinaryExpression::Create(parse_binary_scalar.op(),
-                                         left_argument,
-                                         right_argument);
-    }
     case ParseExpression::kScalarLiteral: {
       const ParseScalarLiteral &parse_literal_scalar =
           static_cast<const ParseScalarLiteral&>(parse_expression);
@@ -2593,57 +2489,6 @@ E::ScalarPtr Resolver::resolveExpression(
           type_hint,
           expression_resolution_info);
     }
-    case ParseExpression::kUnaryExpression: {
-      const ParseUnaryExpression &parse_unary_expr =
-          static_cast<const ParseUnaryExpression&>(parse_expression);
-
-      E::ScalarPtr argument = resolveExpression(
-          *parse_unary_expr.operand(),
-          parse_unary_expr.op().pushDownTypeHint(type_hint),
-          expression_resolution_info);
-
-      // If the argument is a NULL of unknown Type, try to resolve result Type
-      // of this UnaryExpression as follows:
-      //
-      //     1. If the UnaryExpression can only return one type, then the
-      //        result is a NULL of that type.
-      //     2. If there is a type hint for the UnaryExpression's result, and
-      //        it is possible for the UnaryExpression to return the hinted
-      //        type, then the result is a NULL of that type.
-      //     3. Otherwise, the result is a NULL of unknown type (i.e.
-      //        NullType).
-      //
-      // NOTE(chasseur): As with binary expressions above, step #3 does not
-      // always completely capture information about what types the NULL result
-      // can take on, since NullType is implicitly convertable to any Type.
-      if (argument->getValueType().getTypeID() == kNullType) {
-        const Type *fixed_result_type = parse_unary_expr.op().fixedNullableResultType();
-        if (fixed_result_type != nullptr) {
-          return E::ScalarLiteral::Create(fixed_result_type->makeNullValue(),
-                                          *fixed_result_type);
-        }
-
-        if (type_hint != nullptr) {
-          const Type &nullable_type_hint = type_hint->getNullableVersion();
-          if (parse_unary_expr.op().resultTypeIsPlausible(nullable_type_hint)) {
-            return E::ScalarLiteral::Create(nullable_type_hint.makeNullValue(),
-                                            nullable_type_hint);
-          }
-        }
-
-        const Type &null_type = TypeFactory::GetType(kNullType, true);
-        return E::ScalarLiteral::Create(null_type.makeNullValue(),
-                                        null_type);
-      }
-
-      if (!parse_unary_expr.op().canApplyToType(argument->getValueType())) {
-        THROW_SQL_ERROR_AT(&parse_unary_expr)
-            << "Can not apply unary operation \"" << parse_unary_expr.op().getName()
-            << "\" to argument of type " << argument->getValueType().getName();
-      }
-
-      return E::UnaryExpression::Create(parse_unary_expr.op(), argument);
-    }
     case ParseExpression::kFunctionCall: {
       return resolveFunctionCall(
           static_cast<const ParseFunctionCall&>(parse_expression),
@@ -2656,75 +2501,6 @@ E::ScalarPtr Resolver::resolveExpression(
           &type_hints,
           expression_resolution_info,
           true /* has_single_column */);
-    }
-    case ParseExpression::kExtract: {
-      const ParseExtractFunction &parse_extract =
-          static_cast<const ParseExtractFunction&>(parse_expression);
-
-      const ParseString &extract_field = *parse_extract.extract_field();
-      const std::string lowered_unit = ToLower(extract_field.value());
-      DateExtractUnit extract_unit;
-      if (lowered_unit == "year") {
-        extract_unit = DateExtractUnit::kYear;
-      } else if (lowered_unit == "month") {
-        extract_unit = DateExtractUnit::kMonth;
-      } else if (lowered_unit == "day") {
-        extract_unit = DateExtractUnit::kDay;
-      } else if (lowered_unit == "hour") {
-        extract_unit = DateExtractUnit::kHour;
-      } else if (lowered_unit == "minute") {
-        extract_unit = DateExtractUnit::kMinute;
-      } else if (lowered_unit == "second") {
-        extract_unit = DateExtractUnit::kSecond;
-      } else {
-        THROW_SQL_ERROR_AT(&extract_field)
-            << "Invalid extract unit: " << extract_field.value();
-      }
-
-      const DateExtractOperation &op = DateExtractOperation::Instance(extract_unit);
-      const E::ScalarPtr argument = resolveExpression(
-          *parse_extract.date_expression(),
-          op.pushDownTypeHint(type_hint),
-          expression_resolution_info);
-
-      if (!op.canApplyToType(argument->getValueType())) {
-        THROW_SQL_ERROR_AT(parse_extract.date_expression())
-            << "Can not extract from argument of type: "
-            << argument->getValueType().getName();
-      }
-
-      return E::UnaryExpression::Create(op, argument);
-    }
-    case ParseExpression::kSubstring: {
-      const ParseSubstringFunction &parse_substring =
-          static_cast<const ParseSubstringFunction&>(parse_expression);
-
-      // Validate start position and substring length.
-      if (parse_substring.start_position() <= 0) {
-        THROW_SQL_ERROR_AT(&parse_expression)
-            << "The start position must be greater than 0";
-      }
-      if (parse_substring.length() <= 0) {
-        THROW_SQL_ERROR_AT(&parse_expression)
-            << "The substring length must be greater than 0";
-      }
-
-      // Convert 1-base position to 0-base position
-      const std::size_t zero_base_start_position = parse_substring.start_position() - 1;
-      const SubstringOperation &op =
-          SubstringOperation::Instance(zero_base_start_position,
-                                       parse_substring.length());
-
-      const E::ScalarPtr argument =
-          resolveExpression(*parse_substring.operand(),
-                            op.pushDownTypeHint(type_hint),
-                            expression_resolution_info);
-      if (!op.canApplyToType(argument->getValueType())) {
-        THROW_SQL_ERROR_AT(&parse_substring)
-            << "Can not apply substring function to argument of type "
-            << argument->getValueType().getName();
-      }
-      return E::UnaryExpression::Create(op, argument);
     }
     default:
       LOG(FATAL) << "Unknown scalar type: "
@@ -3005,8 +2781,7 @@ E::ScalarPtr Resolver::resolveFunctionCall(
   }
 
   std::vector<E::ScalarPtr> resolved_arguments;
-  const PtrList<ParseExpression> *unresolved_arguments =
-      parse_function_call.arguments();
+  const PtrList<ParseExpression> *unresolved_arguments = parse_function_call.arguments();
   // The first aggregate function and window aggregate function in the arguments.
   const ParseTreeNode *first_aggregate_function = nullptr;
   const ParseTreeNode *first_window_aggregate_function = nullptr;
@@ -3027,10 +2802,19 @@ E::ScalarPtr Resolver::resolveFunctionCall(
       if (expr_resolution_info.hasWindowAggregate() &&
           first_window_aggregate_function == nullptr &&
           parse_function_call.isWindow()) {
-          first_window_aggregate_function =
-              expr_resolution_info.parse_window_aggregate_expression;
+        first_window_aggregate_function =
+            expr_resolution_info.parse_window_aggregate_expression;
       }
     }
+  }
+
+  expression_resolution_info->parse_aggregate_expression = first_aggregate_function;
+  expression_resolution_info->parse_window_aggregate_expression = first_window_aggregate_function;
+
+  if (OperationFactory::HasOperation(function_name, resolved_arguments.size())) {
+    return resolveScalarFunction(parse_function_call,
+                                 resolved_arguments,
+                                 expression_resolution_info);
   }
 
   if (count_star && !resolved_arguments.empty()) {
@@ -3104,9 +2888,9 @@ E::ScalarPtr Resolver::resolveFunctionCall(
 
   if (parse_function_call.isWindow()) {
     return resolveWindowAggregateFunction(parse_function_call,
-                                          expression_resolution_info,
                                           window_aggregate,
-                                          resolved_arguments);
+                                          resolved_arguments,
+                                          expression_resolution_info);
   }
 
   // Create the optimizer representation of the resolved aggregate and an alias
@@ -3128,11 +2912,97 @@ E::ScalarPtr Resolver::resolveFunctionCall(
   return E::ToRef(aggregate_alias);
 }
 
+expressions::ScalarPtr Resolver::resolveScalarFunction(
+    const ParseFunctionCall &parse_function_call,
+    const std::vector<expressions::ScalarPtr> &resolved_arguments,
+    ExpressionResolutionInfo *expression_resolution_info) {
+  std::vector<const Type*> argument_types;
+  std::vector<TypeID> argument_type_ids;
+  std::vector<bool> argument_is_static;
+  std::vector<TypedValue> static_arguments;
+
+  const std::size_t arity = resolved_arguments.size();
+  argument_types.reserve(arity);
+  argument_type_ids.reserve(arity);
+  argument_is_static.reserve(arity);
+  static_arguments.reserve(arity);
+
+  for (std::size_t i = 0; i < arity; ++i) {
+    const E::ScalarPtr &argument = resolved_arguments[i];
+    const Type &argument_type = argument->getValueType();
+    argument_types.emplace_back(&argument_type);
+    argument_type_ids.emplace_back(argument_type.getTypeID());
+
+    E::ScalarLiteralPtr literal;
+    if (E::SomeScalarLiteral::MatchesWithConditionalCast(argument, &literal)) {
+      argument_is_static.emplace_back(true);
+      static_arguments.emplace_back(literal->value());
+    } else {
+      argument_is_static.emplace_back(false);
+      static_arguments.emplace_back();
+    }
+  }
+
+  const std::string &op_name = parse_function_call.name()->value();
+  const OperationSignatureLitePtr signature_lite =
+      OperationSignatureLite::Create(op_name, argument_type_ids, argument_is_static);
+  const OperationSignaturePtr signature =
+      OperationSignature::Create(signature_lite, argument_types, static_arguments);
+
+  std::string diagnostic_message;
+  const OperationSignaturePtr resolved_signature =
+      OperationFactory::ResolveSignature(signature, &diagnostic_message);
+
+  if (resolved_signature == nullptr) {
+    if (diagnostic_message.empty()) {
+      THROW_SQL_ERROR_AT(&parse_function_call)
+          << "Cannot resolve scalar function \"" << op_name << "\"";
+    } else {
+      THROW_SQL_ERROR_AT(&parse_function_call) << diagnostic_message;
+    }
+  }
+
+  std::vector<expressions::ScalarPtr> regular_arguments;
+  for (std::size_t i = 0; i < arity; ++i) {
+    if (resolved_signature->isStaticParameter(i)) {
+      continue;
+    }
+    E::ScalarPtr target_argument = resolved_arguments[i];
+    const Type &target_type = resolved_signature->getParameterType(i);
+    if (!target_type.equals(*argument_types[i])) {
+      // Implicit type coersion.
+      target_argument = E::Cast::Create(target_argument, target_type);
+    }
+    regular_arguments.emplace_back(target_argument);
+  }
+
+  DCHECK(OperationFactory::HasOperation(resolved_signature->getSignatureLite()));
+  const Operation& operation =
+      OperationFactory::GetOperation(resolved_signature->getSignatureLite());
+
+  switch (operation.getOperationSuperTypeID()) {
+    case Operation::kUnaryOperation: {
+      DCHECK_EQ(1u, regular_arguments.size());
+      return E::UnaryExpression::Create(
+          resolved_signature,
+          static_cast<const UnaryOperation&>(operation),
+          regular_arguments.front());
+    }
+    case Operation::kBinaryOperation:
+    default:
+      break;
+  }
+  const auto operation_id =
+     static_cast<std::underlying_type_t<Operation::OperationSuperTypeID>>(
+         operation.getOperationSuperTypeID());
+  LOG(FATAL) << "Unknown opeation super type id: " << operation_id;
+}
+
 E::ScalarPtr Resolver::resolveWindowAggregateFunction(
     const ParseFunctionCall &parse_function_call,
-    ExpressionResolutionInfo *expression_resolution_info,
     const ::quickstep::WindowAggregateFunction *window_aggregate,
-    const std::vector<E::ScalarPtr> &resolved_arguments) {
+    const std::vector<E::ScalarPtr> &resolved_arguments,
+    ExpressionResolutionInfo *expression_resolution_info) {
   // A window aggregate function might be defined OVER a window name or a window.
   E::WindowAggregateFunctionPtr window_aggregate_function;
   if (parse_function_call.window_name() != nullptr) {

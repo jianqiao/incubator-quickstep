@@ -32,6 +32,7 @@
 #include "query_optimizer/expressions/Expression.hpp"
 #include "query_optimizer/expressions/ExpressionType.hpp"
 #include "query_optimizer/expressions/Scalar.hpp"
+#include "types/operations/OperationSignature.hpp"
 #include "types/operations/unary_operations/UnaryOperation.hpp"
 #include "utility/Macros.hpp"
 
@@ -61,7 +62,9 @@ class UnaryExpression : public Scalar {
 
   std::string getName() const override;
 
-  bool isConstant() const override { return operand_->isConstant(); }
+  bool isConstant() const override {
+    return operand_->isConstant();
+  }
 
   /**
    * @return The unary operator.
@@ -74,7 +77,7 @@ class UnaryExpression : public Scalar {
   const ScalarPtr& operand() const { return operand_; }
 
   const Type& getValueType() const override {
-    return *(operation_.resultTypeForArgumentType(operand_->getValueType()));
+    return result_type_;
   }
 
   ExpressionPtr copyWithNewChildren(
@@ -94,14 +97,16 @@ class UnaryExpression : public Scalar {
   /**
    * @brief Creates an immutable UnaryExpression.
    *
+   * @param signature The query-time signature of the operation.
    * @param operation The unary operation.
    * @param operand The operand.
    * @return An immutable UnaryExpression that applies the operation to the
    *         operand.
    */
-  static UnaryExpressionPtr Create(const UnaryOperation &operation,
+  static UnaryExpressionPtr Create(const OperationSignaturePtr &signature,
+                                   const UnaryOperation &operation,
                                    const ScalarPtr &operand) {
-    return UnaryExpressionPtr(new UnaryExpression(operation, operand));
+    return UnaryExpressionPtr(new UnaryExpression(signature, operation, operand));
   }
 
  protected:
@@ -116,15 +121,21 @@ class UnaryExpression : public Scalar {
       std::vector<std::vector<OptimizerTreeBaseNodePtr>> *container_child_fields) const override;
 
  private:
-  UnaryExpression(const UnaryOperation &operation,
+  UnaryExpression(const OperationSignaturePtr &signature,
+                  const UnaryOperation &operation,
                   const ScalarPtr &operand)
-      : operation_(operation), operand_(operand) {
-    DCHECK(operation_.canApplyToType(operand_->getValueType())) << toString();
+      : signature_(signature),
+        operation_(operation),
+        operand_(operand),
+        result_type_(operation_.resultTypeForSignature(signature_)) {
+    DCHECK(operation_.canApplyToSignature(signature_)) << toString();
     addChild(operand);
   }
 
+  const OperationSignaturePtr signature_;
   const UnaryOperation &operation_;
   const ScalarPtr operand_;
+  const Type &result_type_;
 
   DISALLOW_COPY_AND_ASSIGN(UnaryExpression);
 };

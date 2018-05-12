@@ -20,6 +20,11 @@
 #ifndef QUICKSTEP_TYPES_OPERATIONS_OPERATION_HPP_
 #define QUICKSTEP_TYPES_OPERATIONS_OPERATION_HPP_
 
+#include <memory>
+#include <string>
+
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/OperationSignatureLite.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
@@ -27,6 +32,9 @@ namespace quickstep {
 /** \addtogroup Types
  *  @{
  */
+
+class Operation;
+typedef std::shared_ptr<const Operation> OperationPtr;
 
 /**
  * @brief An operation which can be applied to typed values. Each exact
@@ -71,8 +79,8 @@ class Operation {
    *
    * @return The human-readable name of this Operation.
    **/
-  inline const char* getName() const {
-    return name_;
+  virtual std::string getName() const {
+    return "Unknown";
   }
 
   /**
@@ -80,9 +88,45 @@ class Operation {
    *
    * @return The short name of this Operation.
    **/
-  inline const char* getShortName() const {
-    return short_name_;
+  virtual std::string getShortName() const {
+    return "Unknown";
   }
+
+  /**
+   * @brief Get all signatures that should be resolved to this operation.
+   *
+   * @return Signatures that should be resolved to this operation.
+   */
+  virtual std::vector<OperationSignatureLitePtr> getSignatures() const;
+
+  /**
+   * @brief Determine whether this operation can apply to the specified signature.
+   *
+   * @param signature The signature to check.
+   * @param diagnostic_message Diagnostic message to output for situations
+   *        where this operation cannot apply to the signature.
+   * @return Whether this operation can apply to the signature.
+   **/
+  virtual bool canApplyToSignature(const OperationSignaturePtr &signature,
+                                   std::string *diagnostic_message) const;
+
+  /**
+   * @brief Determine whether this operation can apply to the specified signature.
+   *
+   * @param signature The signature to check.
+   * @return Whether this operation can apply to the signature.
+   **/
+  bool canApplyToSignature(const OperationSignaturePtr &signature) const;
+
+  /**
+   * @brief Determine the Type of the result from applying this operation to
+   *        arguments of the specified signature.
+   *
+   * @param signature The signature to check.
+   * @return The Type of the result from applying this operation to arguments
+   *         of the specified signature.
+   **/
+  virtual const Type& resultTypeForSignature(const OperationSignaturePtr &signature) const;
 
   /**
    * @brief Determine whether this Operation is exactly the same as another.
@@ -98,19 +142,12 @@ class Operation {
   }
 
  protected:
-  Operation(const OperationSuperTypeID super_type_id,
-            const char *name,
-            const char *short_name)
-      : super_type_id_(super_type_id),
-        name_(name),
-        short_name_(short_name) {
+  Operation(const OperationSuperTypeID super_type_id)
+      : super_type_id_(super_type_id) {
   }
 
  private:
   const OperationSuperTypeID super_type_id_;
-  const char *name_;
-  const char *short_name_;
-
 
   DISALLOW_COPY_AND_ASSIGN(Operation);
 };

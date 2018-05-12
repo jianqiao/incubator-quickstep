@@ -42,6 +42,7 @@ template <typename CppType>
 class NumericSuperType : public Type {
  public:
   typedef CppType cpptype;
+  static constexpr MemoryLayout kMemoryLayout = kCxxInlinePod;
 
   std::size_t estimateAverageByteLength() const override {
     return sizeof(CppType);

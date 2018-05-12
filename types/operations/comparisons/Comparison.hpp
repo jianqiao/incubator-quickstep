@@ -519,7 +519,6 @@ class Comparison : public Operation {
     return comparison_id_;
   }
 
-
   /**
    * @brief Whether this comparison is one of the 6 basic comparisons
    *        (e.g. =, <>, <, <=, >, >=).
@@ -606,11 +605,7 @@ class Comparison : public Operation {
 
  protected:
   explicit Comparison(const ComparisonID comparison_id)
-      : Operation(Operation::kComparison,
-                  kComparisonNames[
-                      static_cast<typename std::underlying_type<ComparisonID>::type>(comparison_id)],
-                  kComparisonShortNames[
-                      static_cast<typename std::underlying_type<ComparisonID>::type>(comparison_id)]),
+      : Operation(Operation::kComparison),
         comparison_id_(comparison_id) {
   }
 

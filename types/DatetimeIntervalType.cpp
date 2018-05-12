@@ -47,6 +47,8 @@ using std::snprintf;
 
 namespace quickstep {
 
+constexpr TypeID DatetimeIntervalType::kStaticTypeID;
+
 bool DatetimeIntervalType::isCoercibleFrom(const Type &original_type) const {
   QUICKSTEP_NULL_COERCIBILITY_CHECK();
   return (original_type.getTypeID() == kDatetimeInterval);

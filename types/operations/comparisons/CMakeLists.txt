@@ -182,7 +182,7 @@ target_link_libraries(quickstep_types_operations_comparisons_PatternMatchingComp
                       quickstep_types_operations_comparisons_ComparisonID
                       quickstep_types_operations_comparisons_PatternMatchingComparators
                       quickstep_utility_Macros
-                      quickstep_utility_TemplateUtil)
+                      quickstep_utility_meta_MultipleDispatcher)
 
 # Module all-in-one library:
 add_library(quickstep_types_operations_comparisons ../../../empty_src.cpp)

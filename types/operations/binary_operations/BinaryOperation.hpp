@@ -298,15 +298,6 @@ class UncheckedBinaryOperator {
 class BinaryOperation : public Operation {
  public:
   /**
-   * @brief Generate a serialized Protocol Buffer representation of
-   *        this BinaryOperation.
-   *
-   * @return The serialized Protocol Buffer representation of
-   *         this BinaryOperation.
-   **/
-  serialization::BinaryOperation getProto() const;
-
-  /**
    * @brief Determine the ID of this BinaryOperation
    *
    * @return The ID of this BinaryOperation
@@ -523,11 +514,7 @@ class BinaryOperation : public Operation {
 
  protected:
   explicit BinaryOperation(const BinaryOperationID operation_id)
-      : Operation(Operation::kBinaryOperation,
-                  kBinaryOperationNames[
-                      static_cast<typename std::underlying_type<BinaryOperationID>::type>(operation_id)],
-                  kBinaryOperationShortNames[
-                      static_cast<typename std::underlying_type<BinaryOperationID>::type>(operation_id)]),
+      : Operation(Operation::kBinaryOperation),
         operation_id_(operation_id) {
   }
 

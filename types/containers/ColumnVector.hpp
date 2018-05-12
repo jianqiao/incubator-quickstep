@@ -186,7 +186,18 @@ class NativeColumnVector : public ColumnVector {
    *
    * @return The number of values in this NativeColumnVector.
    **/
-  inline std::size_t size() const override {
+  std::size_t size() const override {
+    return actual_length_;
+  }
+
+  /**
+   * @brief Get the number of values in this NativeColumnVector.
+   * @note This inline version of size() is intended for situations where the
+   *       virtual method call overhead need to be avoided.
+   *
+   * @return The number of values in this NativeColumnVector.
+   **/
+  inline std::size_t sizeInl() const {
     return actual_length_;
   }
 
@@ -216,6 +227,17 @@ class NativeColumnVector : public ColumnVector {
         ? type_.makeNullValue()
         : type_.makeValue(static_cast<const char*>(values_) + (position * type_length_),
                           type_length_);
+  }
+
+  /**
+   * @brief Set a value to be NULL in this NativeColumnVector.
+   *
+   * @param position The position of the value to set.
+   **/
+  inline void setNullValue(const std::size_t position) const {
+    DCHECK_LT(position, actual_length_);
+    DCHECK(null_bitmap_);
+    null_bitmap_->setBit(position, true);
   }
 
   /**
@@ -446,7 +468,18 @@ class IndirectColumnVector : public ColumnVector {
    *
    * @return The number of values in this IndirectColumnVector.
    **/
-  inline std::size_t size() const override {
+  std::size_t size() const override {
+    return values_.size();
+  }
+
+  /**
+   * @brief Get the number of values in this NativeColumnVector.
+   * @note This inline version of size() is intended for situations where the
+   *       virtual method call overhead need to be avoided.
+   *
+   * @return The number of values in this NativeColumnVector.
+   **/
+  inline std::size_t sizeInl() const {
     return values_.size();
   }
 
@@ -473,6 +506,15 @@ class IndirectColumnVector : public ColumnVector {
   inline const TypedValue& getTypedValue(const std::size_t position) const {
     DCHECK_LT(position, values_.size());
     return values_[position];
+  }
+
+  /**
+   * @brief Append a NULL value to this IndirectColumnVector.
+   **/
+  inline void appendNullValue() {
+    DCHECK(type_.isNullable());
+    DCHECK_LT(values_.size(), reserved_length_);
+    values_.emplace_back(type_.makeNullValue());
   }
 
   /**

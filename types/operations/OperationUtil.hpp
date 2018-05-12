@@ -17,16 +17,30 @@
  * under the License.
  **/
 
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
+#ifndef QUICKSTEP_TYPES_OPERATIONS_OPERATION_UTIL_HPP_
+#define QUICKSTEP_TYPES_OPERATIONS_OPERATION_UTIL_HPP_
+
+#include "types/Type.hpp"
+#include "types/operations/OperationSignature.hpp"
 
 namespace quickstep {
 
-const char *kUnaryOperationNames[] = {
-  "Negate", "Cast", "DateExtract", "Substring"
-};
+/** \addtogroup Types
+ *  @{
+ */
 
-const char *kUnaryOperationShortNames[] = {
-  "-", "Cast", "DateExtract", "Substring"
-};
+/**
+ * @brief Helper function for creating a Cast operation signature.
+ *
+ * @param source_type The source type.
+ * @param target_type The target type to be converted to.
+ * @return A Cast operation signature.
+ */
+OperationSignaturePtr CreateCast(const Type &source_type,
+                                 const Type &target_type);
+
+/** @} */
 
 }  // namespace quickstep
+
+#endif  // QUICKSTEP_TYPES_OPERATIONS_OPERATION_UTIL_HPP_

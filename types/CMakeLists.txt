@@ -32,6 +32,7 @@ QS_PROTOBUF_GENERATE_CPP(types_TypedValue_proto_srcs types_TypedValue_proto_hdrs
 QS_PROTOBUF_GENERATE_CPP(types_Type_proto_srcs types_Type_proto_hdrs Type.proto)
 
 # Declare micro-libs:
+add_library(quickstep_types_CastUtil CastUtil.cpp CastUtil.hpp)
 add_library(quickstep_types_CharType CharType.cpp CharType.hpp)
 add_library(quickstep_types_DateOperatorOverloads ../empty_src.cpp DateOperatorOverloads.hpp)
 add_library(quickstep_types_DateType DateType.cpp DateType.hpp)
@@ -45,6 +46,7 @@ add_library(quickstep_types_IntervalLit ../empty_src.cpp IntervalLit.hpp)
 add_library(quickstep_types_IntervalParser IntervalParser.cpp IntervalParser.hpp)
 add_library(quickstep_types_LongType LongType.cpp LongType.hpp)
 add_library(quickstep_types_NullCoercibilityCheckMacro ../empty_src.cpp NullCoercibilityCheckMacro.hpp)
+add_library(quickstep_types_NullLit ../empty_src.cpp NullLit.hpp)
 add_library(quickstep_types_NullType ../empty_src.cpp NullType.hpp)
 add_library(quickstep_types_NumericSuperType ../empty_src.cpp NumericSuperType.hpp)
 add_library(quickstep_types_NumericTypeUnifier ../empty_src.cpp NumericTypeUnifier.hpp)
@@ -52,6 +54,7 @@ add_library(quickstep_types_Type Type.cpp Type.hpp)
 add_library(quickstep_types_TypeErrors ../empty_src.cpp TypeErrors.hpp)
 add_library(quickstep_types_TypeFactory TypeFactory.cpp TypeFactory.hpp)
 add_library(quickstep_types_TypeID TypeID.cpp TypeID.hpp)
+add_library(quickstep_types_TypeTraits ../empty_src.cpp TypeTraits.hpp)
 add_library(quickstep_types_Type_proto ${types_Type_proto_srcs})
 add_library(quickstep_types_TypedValue TypedValue.cpp TypedValue.hpp)
 add_library(quickstep_types_TypedValue_proto ${types_TypedValue_proto_srcs})
@@ -59,6 +62,13 @@ add_library(quickstep_types_VarCharType VarCharType.cpp VarCharType.hpp)
 add_library(quickstep_types_YearMonthIntervalType YearMonthIntervalType.cpp YearMonthIntervalType.hpp)
 
 # Link dependencies:
+target_link_libraries(quickstep_types_CastUtil
+                      glog
+                      quickstep_storage_StorageConstants
+                      quickstep_types_Type
+                      quickstep_types_TypeFactory
+                      quickstep_types_TypeID
+                      quickstep_utility_Macros)
 target_link_libraries(quickstep_types_CharType
                       glog
                       quickstep_types_NullCoercibilityCheckMacro
@@ -185,6 +195,16 @@ target_link_libraries(quickstep_types_TypeFactory
                       quickstep_types_VarCharType
                       quickstep_types_YearMonthIntervalType
                       quickstep_utility_Macros)
+target_link_libraries(quickstep_types_TypeID
+                      quickstep_types_Type_proto)
+target_link_libraries(quickstep_types_TypeTraits
+                      quickstep_types_DatetimeLit
+                      quickstep_types_IntervalLit
+                      quickstep_types_NullLit
+                      quickstep_types_Type
+                      quickstep_types_TypeID
+                      quickstep_utility_meta_Common
+                      quickstep_utility_meta_TypeList)
 target_link_libraries(quickstep_types_Type_proto
                       ${PROTOBUF_LIBRARY})
 target_link_libraries(quickstep_types_TypedValue
@@ -225,6 +245,7 @@ target_link_libraries(quickstep_types_YearMonthIntervalType
 # Module all-in-one library:
 add_library(quickstep_types ../empty_src.cpp TypesModule.hpp)
 target_link_libraries(quickstep_types
+                      quickstep_types_CastUtil
                       quickstep_types_CharType
                       quickstep_types_DateOperatorOverloads
                       quickstep_types_DateType
@@ -238,6 +259,7 @@ target_link_libraries(quickstep_types
                       quickstep_types_IntervalParser
                       quickstep_types_LongType
                       quickstep_types_NullCoercibilityCheckMacro
+                      quickstep_types_NullLit
                       quickstep_types_NullType
                       quickstep_types_NumericSuperType
                       quickstep_types_NumericTypeUnifier
@@ -245,6 +267,7 @@ target_link_libraries(quickstep_types
                       quickstep_types_TypeErrors
                       quickstep_types_TypeFactory
                       quickstep_types_TypeID
+                      quickstep_types_TypeTraits
                       quickstep_types_Type_proto
                       quickstep_types_TypedValue
                       quickstep_types_TypedValue_proto

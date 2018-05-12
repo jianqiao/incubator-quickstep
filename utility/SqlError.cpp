@@ -80,7 +80,8 @@ std::string SqlError::formatMessage(const std::string &sql_query) const {
     if (current_line_end_pos == -1) {
       current_line_end_pos = sql_query.size() - 1;
     }
-    DCHECK(current_line_end_pos - current_line_begin_pos + 1 > column_number_) << "Invalid line and column number";
+    DCHECK(current_line_end_pos - current_line_begin_pos + 1 > column_number_)
+        << "Invalid line and column number";
   }
 
   std::ostringstream error_stream;
@@ -90,8 +91,12 @@ std::string SqlError::formatMessage(const std::string &sql_query) const {
   DCHECK_LE(start_pos, error_column_number + current_line_begin_pos);
   DCHECK_LE(error_column_number + current_line_begin_pos, end_pos);
 
-  error_stream << "ERROR: " << getErrorMessage();
-  error_stream << " (" << error_line_number + 1 << " : " << error_column_number + 1 << ")\n";
+  const std::string error_message = getErrorMessage();
+  error_stream << "ERROR: " << error_message;
+  if (!error_message.empty() && error_message.back() != '\n') {
+    error_stream << " ";
+  }
+  error_stream << "(" << error_line_number + 1 << " : " << error_column_number + 1 << ")\n";
 
   // Append the snippet text.
   bool has_omitted_text = false;
@@ -153,8 +158,10 @@ int SqlError::getEndErrorPos(int center_pos, const std::string &sql_statement) c
     end_pos = current_line_end_pos;
   }
 
-  if (end_pos < static_cast<int>(sql_statement.size()) && std::isalnum(sql_statement.at(end_pos))) {
-    while (end_pos < static_cast<int>(sql_statement.size()) - 1 && std::isalnum(sql_statement.at(end_pos + 1))) {
+  if (end_pos < static_cast<int>(sql_statement.size()) &&
+      std::isalnum(sql_statement.at(end_pos))) {
+    while (end_pos < static_cast<int>(sql_statement.size()) - 1 &&
+           std::isalnum(sql_statement.at(end_pos + 1))) {
       ++end_pos;
     }
   }

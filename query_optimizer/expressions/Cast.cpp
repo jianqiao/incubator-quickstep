@@ -34,7 +34,11 @@
 #include "query_optimizer/expressions/PatternMatcher.hpp"
 #include "query_optimizer/expressions/Scalar.hpp"
 #include "types/Type.hpp"
-#include "types/operations/unary_operations/NumericCastOperation.hpp"
+#include "types/TypeID.hpp"
+#include "types/operations/OperationFactory.hpp"
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/OperationUtil.hpp"
+#include "types/operations/unary_operations/CastOperation.hpp"
 #include "utility/HashPair.hpp"
 
 #include "glog/logging.h"
@@ -56,8 +60,12 @@ ExpressionPtr Cast::copyWithNewChildren(
     const std::unordered_map<ExprId, const CatalogAttribute*> &substitution_map,
     const std::unordered_set<ExprId> &left_expr_ids,
     const std::unordered_set<ExprId> &right_expr_ids) const {
+  const OperationSignaturePtr signature =
+      CreateCast(operand_->getValueType(), target_type_);
+  DCHECK(OperationFactory::HasOperation(signature->getSignatureLite()));
   return new ::quickstep::ScalarUnaryExpression(
-      ::quickstep::NumericCastOperation::Instance(target_type_),
+      signature,
+      OperationFactory::GetUnaryOperation(signature->getSignatureLite()),
       operand_->concretize(substitution_map, left_expr_ids, right_expr_ids));
 }
 

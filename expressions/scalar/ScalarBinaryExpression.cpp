@@ -52,13 +52,7 @@ ScalarBinaryExpression::ScalarBinaryExpression(const BinaryOperation &operation,
 }
 
 serialization::Scalar ScalarBinaryExpression::getProto() const {
-  serialization::Scalar proto;
-  proto.set_data_source(serialization::Scalar::BINARY_EXPRESSION);
-  proto.MutableExtension(serialization::ScalarBinaryExpression::operation)->CopyFrom(operation_.getProto());
-  proto.MutableExtension(serialization::ScalarBinaryExpression::left_operand)->CopyFrom(left_operand_->getProto());
-  proto.MutableExtension(serialization::ScalarBinaryExpression::right_operand)->CopyFrom(right_operand_->getProto());
-
-  return proto;
+  LOG(FATAL) << "Not implemented";
 }
 
 Scalar* ScalarBinaryExpression::clone() const {

@@ -42,7 +42,7 @@ class Type;
  **/
 class FloatType : public NumericSuperType<float> {
  public:
-  static const TypeID kStaticTypeID;
+  static constexpr TypeID kStaticTypeID = kFloat;
 
   /**
    * @brief Get a reference to the non-nullable singleton instance of this

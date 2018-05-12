@@ -41,7 +41,7 @@ using std::snprintf;
 
 namespace quickstep {
 
-const TypeID FloatType::kStaticTypeID = kFloat;
+constexpr TypeID FloatType::kStaticTypeID;
 
 bool FloatType::isSafelyCoercibleFrom(const Type &original_type) const {
   QUICKSTEP_NULL_COERCIBILITY_CHECK();
