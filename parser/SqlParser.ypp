@@ -97,20 +97,15 @@ typedef struct YYLTYPE {
 #include "parser/ParseSubqueryExpression.hpp"
 #include "parser/ParseSubqueryTableReference.hpp"
 #include "parser/ParseTableReference.hpp"
+#include "parser/ParserUtil.hpp"
 #include "parser/ParseWindow.hpp"
 #include "storage/StorageBlockInfo.hpp"
 #include "types/Type.hpp"
 #include "types/TypeFactory.hpp"
 #include "types/TypeID.hpp"
-#include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 #include "types/operations/comparisons/Comparison.hpp"
 #include "types/operations/comparisons/ComparisonFactory.hpp"
 #include "types/operations/comparisons/ComparisonID.hpp"
-#include "types/operations/unary_operations/UnaryOperation.hpp"
-#include "types/operations/unary_operations/UnaryOperationFactory.hpp"
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
 #include "utility/PtrList.hpp"
 #include "utility/PtrVector.hpp"
 
@@ -190,8 +185,8 @@ typedef void* yyscan_t;
   quickstep::ParseStatementQuit *quit_statement_;
 
   const quickstep::Comparison *comparison_;
-  const quickstep::UnaryOperation *unary_operation_;
-  const quickstep::BinaryOperation *binary_operation_;
+  quickstep::ParseString *unary_operation_;
+  quickstep::ParseString *binary_operation_;
 
   quickstep::ParseFunctionCall *function_call_;
   quickstep::PtrList<quickstep::ParseExpression> *expression_list_;
@@ -272,6 +267,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %token TOKEN_DATE;
 %token TOKEN_DATETIME;
 %token TOKEN_DAY;
+%token TOKEN_DCOLON
 %token TOKEN_DECIMAL;
 %token TOKEN_DEFAULT;
 %token TOKEN_DELETE;
@@ -376,6 +372,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %type <boolean_value_>
   boolean_value
   frame_mode
+  opt_distinct
   opt_all_distinct
 
 %type <literal_value_>
@@ -398,6 +395,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
   add_expression
   case_expression
   opt_else_clause
+  cast_expression
   extract_function
   substr_function
 
@@ -628,8 +626,6 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 
 %destructor { } <boolean_value_>
 %destructor { } <comparison_>
-%destructor { } <unary_operation_>
-%destructor { } <binary_operation_>
 %destructor { } <join_type_>
 
 %destructor {
@@ -775,10 +771,12 @@ data_type:
     YYERROR;
   }
   | TOKEN_DATE {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDate));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDate));
   }
   | TOKEN_DATETIME {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDatetime));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDatetime));
   }
   | TOKEN_TIME {
     $$ = nullptr;
@@ -786,31 +784,40 @@ data_type:
     YYERROR;
   }
   | TOKEN_TIMESTAMP {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDatetime));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDatetime));
   }
   | TOKEN_DECIMAL {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDouble));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDouble));
   }
   | TOKEN_REAL {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDouble));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDouble));
   }
   | TOKEN_DOUBLE {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDouble));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDouble));
   }
   | TOKEN_FLOAT {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kFloat));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kFloat));
   }
   | TOKEN_SMALLINT {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kInt));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kInt));
   }
   | TOKEN_INTEGER {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kInt));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kInt));
   }
   | TOKEN_BIGINT {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kLong));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kLong));
   }
   | TOKEN_LONG {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kLong));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kLong));
   }
   | TOKEN_INTERVAL {
     /**
@@ -825,10 +832,12 @@ data_type:
     YYERROR;
   }
   | TOKEN_DATETIME TOKEN_INTERVAL {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kDatetimeInterval));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kDatetimeInterval));
   }
   | TOKEN_YEARMONTH TOKEN_INTERVAL {
-    $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kYearMonthInterval));
+    $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column,
+                                      quickstep::TypeFactory::GetType(quickstep::kYearMonthInterval));
   }
   | TOKEN_CHARACTER '(' TOKEN_UNSIGNED_NUMVAL ')' {
     if ($3->float_like()) {
@@ -843,7 +852,8 @@ data_type:
         quickstep_yyerror(&@3, yyscanner, nullptr, "Length for CHAR type must be at least 1");
         YYERROR;
       } else {
-        $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kChar, $3->long_value(), false));
+        const quickstep::Type &type = quickstep::TypeFactory::GetType(quickstep::kChar, $3->long_value(), false);
+        $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column, type);
         delete $3;
       }
     }
@@ -861,7 +871,8 @@ data_type:
         quickstep_yyerror(&@3, yyscanner, nullptr, "Negative length supplied for VARCHAR type");
         YYERROR;
       } else {
-        $$ = new quickstep::ParseDataType(quickstep::TypeFactory::GetType(quickstep::kVarChar, $3->long_value(), false));
+        const quickstep::Type &type = quickstep::TypeFactory::GetType(quickstep::kVarChar, $3->long_value(), false);
+        $$ = new quickstep::ParseDataType(@1.first_line, @1.first_column, type);
         delete $3;
       }
     }
@@ -1250,6 +1261,17 @@ set_operation_union:
     $$ = $1;
   }
 
+opt_all_distinct:
+  {
+    $$ = true;  // Distinct
+  }
+  | TOKEN_ALL {
+    $$ = false;  // All
+  }
+  | TOKEN_DISTINCT {
+    $$ = true;  // Distinct
+  };
+
 set_operation_intersect:
   set_operation_intersect TOKEN_INTERSECT select_query {
     $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
@@ -1265,20 +1287,17 @@ set_operation_intersect:
   }
 
 select_query:
-  TOKEN_SELECT opt_all_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
+  TOKEN_SELECT opt_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
       opt_order_by_clause opt_limit_clause opt_window_clause {
-    $$ = new quickstep::ParseSelect(@1.first_line, @1.first_column, $3, $4, $5, $6, $7, $8, $9, $10);
+    $$ = new quickstep::ParseSelect(@1.first_line, @1.first_column, $2, $3, $4, $5, $6, $7, $8, $9, $10);
   }
 
-opt_all_distinct:
+opt_distinct:
   {
-    $$ = true;  // Distinct
-  }
-  | TOKEN_ALL {
-    $$ = false;  // All
+    $$ = false;
   }
   | TOKEN_DISTINCT {
-    $$ = true;  // Distinct
+    $$ = true;
   };
 
 selection:
@@ -1680,7 +1699,8 @@ predicate_expression_base:
 /* Scalars */
 add_expression:
   add_expression add_operation multiply_expression {
-    $$ = new quickstep::ParseBinaryExpression(@2.first_line, @2.first_column, *$2, $1, $3);
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, $2, quickstep::CreatePtrList($1, $3));
   }
   | multiply_expression {
     $$ = $1;
@@ -1688,7 +1708,8 @@ add_expression:
 
 multiply_expression:
   multiply_expression multiply_operation unary_expression {
-    $$ = new quickstep::ParseBinaryExpression(@2.first_line, @2.first_column, *$2, $1, $3);
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, $2, quickstep::CreatePtrList($1, $3));
   }
   | unary_expression {
     $$ = $1;
@@ -1696,7 +1717,8 @@ multiply_expression:
 
 unary_expression:
   unary_operation expression_base {
-    $$ = new quickstep::ParseUnaryExpression(@1.first_line, @1.first_column, *$1, $2);
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, $1, quickstep::CreatePtrList($2));
   }
   | expression_base {
     $$ = $1;
@@ -1718,6 +1740,9 @@ expression_base:
   }
   | function_call TOKEN_OVER '(' window_definition ')' {
     $1->setWindow($4);
+    $$ = $1;
+  }
+  | cast_expression {
     $$ = $1;
   }
   | extract_function {
@@ -1747,24 +1772,46 @@ function_call:
   }
   | any_name '(' expression_list ')' {
     $$ = new quickstep::ParseFunctionCall(@1.first_line, @1.first_column, false, $1, $3);
-  };
+  }
   | any_name '(' TOKEN_DISTINCT expression_list ')' {
     $$ = new quickstep::ParseFunctionCall(@1.first_line, @1.first_column, true, $1, $4);
   };
 
+cast_expression:
+  expression_base TOKEN_DCOLON data_type {
+    auto *func_name = new quickstep::ParseString(@2.first_line, @2.first_column, "cast");
+    auto *type_name = new quickstep::ParseScalarLiteral(
+        new quickstep::StringParseLiteralValue(
+            new quickstep::ParseString($3->line_number(),
+                                       $3->column_number(),
+                                       $3->getType().getName()),
+            nullptr));
+    delete $3;
+    $$ = new quickstep::ParseFunctionCall(
+        @2.first_line, @2.first_column, false, func_name, quickstep::CreatePtrList($1, type_name));
+  }
+
 extract_function:
   TOKEN_EXTRACT '(' datetime_unit TOKEN_FROM add_expression ')' {
-    $$ = new quickstep::ParseExtractFunction(@1.first_line, @1.first_column, $3, $5);
+    auto *name = new quickstep::ParseString(@1.first_line, @1.first_column, "extract");
+    auto *unit = new quickstep::ParseScalarLiteral(new quickstep::StringParseLiteralValue($3, nullptr));
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, name, quickstep::CreatePtrList($5, unit));
   };
 
 substr_function:
   TOKEN_SUBSTRING '(' add_expression TOKEN_FROM TOKEN_UNSIGNED_NUMVAL ')' {
-    $$ = new quickstep::ParseSubstringFunction(
-        @1.first_line, @1.first_column, $3, $5->long_value());
+    auto *name = new quickstep::ParseString(@1.first_line, @1.first_column, "substring");
+    auto *num_chars = new quickstep::ParseScalarLiteral($5);
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, name, quickstep::CreatePtrList($3, num_chars));
   }
   | TOKEN_SUBSTRING '(' add_expression TOKEN_FROM TOKEN_UNSIGNED_NUMVAL TOKEN_FOR TOKEN_UNSIGNED_NUMVAL ')' {
-    $$ = new quickstep::ParseSubstringFunction(
-        @1.first_line, @1.first_column, $3, $5->long_value(), $7->long_value());
+    auto *name = new quickstep::ParseString(@1.first_line, @1.first_column, "substring");
+    auto *start_pos = new quickstep::ParseScalarLiteral($5);
+    auto *num_chars = new quickstep::ParseScalarLiteral($7);
+    $$ = new quickstep::ParseFunctionCall(
+        @1.first_line, @1.first_column, false, name, quickstep::CreatePtrList($3, start_pos, num_chars));
   };
 
 case_expression:
@@ -1994,26 +2041,26 @@ unary_operation:
      * to shift rather than reduce, the case in 'literal_value' has precedence
      * over this one.
      **/
-    $$ = &quickstep::UnaryOperationFactory::GetUnaryOperation(quickstep::UnaryOperationID::kNegate);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("-"));
   };
 
 add_operation:
   '+' {
-    $$ = &quickstep::BinaryOperationFactory::GetBinaryOperation(quickstep::BinaryOperationID::kAdd);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("+"));
   }
   | '-' {
-    $$ = &quickstep::BinaryOperationFactory::GetBinaryOperation(quickstep::BinaryOperationID::kSubtract);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("-"));
   };
 
 multiply_operation:
   '%' {
-    $$ = &quickstep::BinaryOperationFactory::GetBinaryOperation(quickstep::BinaryOperationID::kModulo);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("%"));
   }
   | '*' {
-    $$ = &quickstep::BinaryOperationFactory::GetBinaryOperation(quickstep::BinaryOperationID::kMultiply);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("*"));
   }
   | '/' {
-    $$ = &quickstep::BinaryOperationFactory::GetBinaryOperation(quickstep::BinaryOperationID::kDivide);
+    $$ = new quickstep::ParseString(@1.first_line, @1.first_column, std::string("/"));
   };
 
 /* General Utility Stuff */

@@ -31,6 +31,7 @@
 #include "storage/StorageBlockInfo.hpp"
 #include "types/TypedValue.hpp"
 #include "types/containers/ColumnVector.hpp"
+#include "types/operations/OperationSignature.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
 #include "utility/Macros.hpp"
 
@@ -55,13 +56,15 @@ class ScalarBinaryExpression : public Scalar {
   /**
    * @brief Constructor.
    *
+   * @param signature The query-time signature of the operation.
    * @param operation The binary operation to be performed.
    * @param left_operand The left argument of the operation, which this
    *        ScalarBinaryExpression takes ownership of.
    * @param right_operand The right argument of the operation, which this
    *        ScalarBinaryExpression takes ownership of.
    **/
-  ScalarBinaryExpression(const BinaryOperation &operation,
+  ScalarBinaryExpression(const OperationSignaturePtr &signature,
+                         const BinaryOperation &operation,
                          Scalar *left_operand,
                          Scalar *right_operand);
 
@@ -89,12 +92,12 @@ class ScalarBinaryExpression : public Scalar {
       const tuple_id right_tuple_id) const override;
 
   bool hasStaticValue() const override {
-    return fast_operator_.get() == nullptr;
+    return static_value_ != nullptr;
   }
 
   const TypedValue& getStaticValue() const override {
     DCHECK(hasStaticValue());
-    return static_value_;
+    return *static_value_;
   }
 
   ColumnVectorPtr getAllValues(ValueAccessor *accessor,
@@ -117,13 +120,12 @@ class ScalarBinaryExpression : public Scalar {
       std::vector<std::vector<const Expression*>> *container_child_fields) const override;
 
  private:
-  void initHelper(bool own_children);
-
+  const OperationSignaturePtr signature_;
   const BinaryOperation &operation_;
 
   std::unique_ptr<Scalar> left_operand_;
   std::unique_ptr<Scalar> right_operand_;
-  TypedValue static_value_;
+  std::unique_ptr<TypedValue> static_value_;
   std::unique_ptr<UncheckedBinaryOperator> fast_operator_;
 
   friend class PredicateTest;

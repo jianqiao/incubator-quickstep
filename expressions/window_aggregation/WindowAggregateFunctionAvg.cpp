@@ -27,8 +27,6 @@
 #include "types/TypeFactory.hpp"
 #include "types/TypeID.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 
 #include "glog/logging.h"
 
@@ -41,11 +39,15 @@ bool WindowAggregateFunctionAvg::canApplyToTypes(
     return false;
   }
 
-  // Argument must be addable and divisible.
-  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
-             .canApplyToTypes(*argument_types.front(), *argument_types.front()) &&
-         BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide)
-             .canApplyToTypes(*argument_types.front(), TypeFactory::GetType(kDouble));
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//  // Argument must be addable and divisible.
+//  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
+//             .canApplyToTypes(*argument_types.front(), *argument_types.front()) &&
+//         BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide)
+//             .canApplyToTypes(*argument_types.front(), TypeFactory::GetType(kDouble));
+  return false;
 }
 
 const Type* WindowAggregateFunctionAvg::resultTypeForArgumentTypes(
@@ -68,8 +70,12 @@ const Type* WindowAggregateFunctionAvg::resultTypeForArgumentTypes(
       break;
   }
 
-  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide)
-             .resultTypeForArgumentTypes(*sum_type, TypeFactory::GetType(kDouble));
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide)
+//             .resultTypeForArgumentTypes(*sum_type, TypeFactory::GetType(kDouble));
+  return nullptr;
 }
 
 WindowAggregationHandle* WindowAggregateFunctionAvg::createHandle(

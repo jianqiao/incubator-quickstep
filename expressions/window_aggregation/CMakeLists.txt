@@ -70,8 +70,6 @@ target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregateFun
                       quickstep_types_TypeFactory
                       quickstep_types_TypeID
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregateFunctionCount
                       glog
@@ -121,8 +119,6 @@ target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregateFun
                       quickstep_types_TypeFactory
                       quickstep_types_TypeID
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregateFunction_proto
                       ${PROTOBUF_LIBRARY})
@@ -139,8 +135,6 @@ target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregationH
                       quickstep_types_containers_ColumnVector
                       quickstep_types_containers_ColumnVectorsValueAccessor
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_types_operations_comparisons_Comparison
                       quickstep_types_operations_comparisons_ComparisonFactory
                       quickstep_types_operations_comparisons_ComparisonID
@@ -156,8 +150,6 @@ target_link_libraries(quickstep_expressions_windowaggregation_WindowAggregationH
                       quickstep_types_TypedValue
                       quickstep_types_containers_ColumnVectorsValueAccessor
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_types_operations_comparisons_Comparison
                       quickstep_utility_Macros)
 

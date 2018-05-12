@@ -25,20 +25,109 @@ QS_PROTOBUF_GENERATE_CPP(types_operations_Operation_proto_srcs
 
 # Declare micro-libs:
 add_library(quickstep_types_operations_Operation Operation.cpp Operation.hpp)
+add_library(quickstep_types_operations_OperationFactory OperationFactory.cpp OperationFactory.hpp)
+add_library(quickstep_types_operations_OperationSignature OperationSignature.cpp OperationSignature.hpp)
+add_library(quickstep_types_operations_OperationSignatureCoercionPrecedence
+            OperationSignatureCoercionPrecedence.cpp
+            OperationSignatureCoercionPrecedence.hpp)
+add_library(quickstep_types_operations_OperationSignatureLite OperationSignatureLite.cpp OperationSignatureLite.hpp)
+add_library(quickstep_types_operations_OperationTraits ../../empty_src.cpp OperationTraits.hpp)
+add_library(quickstep_types_operations_OperationUtil OperationUtil.cpp OperationUtil.hpp)
 add_library(quickstep_types_operations_Operation_proto ${types_operations_Operation_proto_srcs})
+add_library(quickstep_types_operations_OperatorPrecedence ../../empty_src.cpp OperatorPrecedence.hpp)
 
 # Link dependencies:
 target_link_libraries(quickstep_types_operations_Operation
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperationSignatureLite
+                      quickstep_types_operations_OperatorPrecedence
                       quickstep_utility_Macros)
+target_link_libraries(quickstep_types_operations_OperationFactory
+                      glog
+                      quickstep_types_TypeID
+                      quickstep_types_operations_Operation
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperationSignatureCoercionPrecedence
+                      quickstep_types_operations_OperationSignatureLite
+                      quickstep_types_operations_binaryoperations_ArithmeticBinaryOperations
+                      quickstep_types_operations_binaryoperations_BinaryOperation
+                      quickstep_types_operations_binaryoperations_BinaryOperationCodeGen
+                      quickstep_types_operations_binaryoperations_CxxMathBinaryOperations
+                      quickstep_types_operations_unaryoperations_ArithmeticUnaryOperations
+                      quickstep_types_operations_unaryoperations_CastOperation
+                      quickstep_types_operations_unaryoperations_CxxMathUnaryOperations
+                      quickstep_types_operations_unaryoperations_UnaryOperation
+                      quickstep_types_operations_unaryoperations_UnaryOperationCodeGen
+                      quickstep_utility_HashPair
+                      quickstep_utility_Macros)
+target_link_libraries(quickstep_types_operations_OperationSignature
+                      glog
+                      quickstep_types_CastUtil
+                      quickstep_types_Type
+                      quickstep_types_TypeFactory
+                      quickstep_types_TypedValue
+                      quickstep_types_operations_OperationSignatureLite
+                      quickstep_types_operations_Operation_proto
+                      quickstep_utility_HashPair
+                      quickstep_utility_Macros)
+target_link_libraries(quickstep_types_operations_OperationSignatureCoercionPrecedence
+                      glog
+                      quickstep_utility_Macros)
+target_link_libraries(quickstep_types_operations_OperationSignatureLite
+                      glog
+                      quickstep_types_CastUtil
+                      quickstep_types_TypeID
+                      quickstep_types_operations_OperationSignatureCoercionPrecedence
+                      quickstep_types_operations_Operation_proto
+                      quickstep_utility_HashPair
+                      quickstep_utility_Macros
+                      quickstep_utility_StringUtil)
+target_link_libraries(quickstep_types_operations_OperationTraits
+                      quickstep_catalog_CatalogTypedefs
+                      quickstep_types_Type
+                      quickstep_types_TypedValue
+                      quickstep_types_containers_ColumnVector
+                      quickstep_utility_Macros
+                      quickstep_utility_meta_TypeList)
+target_link_libraries(quickstep_types_operations_OperationUtil
+                      quickstep_types_Type
+                      quickstep_types_TypeFactory
+                      quickstep_types_TypeID
+                      quickstep_types_TypedValue
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperationSignatureLite)
 target_link_libraries(quickstep_types_operations_Operation_proto
                       ${PROTOBUF_LIBRARY}
-                      quickstep_types_Type_proto)
+                      quickstep_types_Type_proto
+                      quickstep_types_TypedValue_proto)
 
 # Module all-in-one library:
 add_library(quickstep_types_operations ../../empty_src.cpp)
 target_link_libraries(quickstep_types_operations
                       quickstep_types_operations_Operation
+                      quickstep_types_operations_OperationFactory
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperationSignatureCoercionPrecedence
+                      quickstep_types_operations_OperationSignatureLite
+                      quickstep_types_operations_OperationTraits
+                      quickstep_types_operations_OperationUtil
                       quickstep_types_operations_Operation_proto
+                      quickstep_types_operations_OperatorPrecedence
                       quickstep_types_operations_binaryoperations
                       quickstep_types_operations_comparisons
                       quickstep_types_operations_unaryoperations)
+
+# Tests:
+add_executable(OperationSignature_tests
+               "${CMAKE_CURRENT_SOURCE_DIR}/tests/OperationSignature_unittest.cpp")
+target_link_libraries(OperationSignature_tests
+                      gtest
+                      gtest_main
+                      quickstep_types_CharType
+                      quickstep_types_FloatType
+                      quickstep_types_IntType
+                      quickstep_types_LongType
+                      quickstep_types_TypeID
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperationSignatureLite)
+add_test(OperationSignature_tests OperationSignature_tests)

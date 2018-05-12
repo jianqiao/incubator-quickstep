@@ -43,11 +43,11 @@ class YearMonthIntervalType : public Type {
  public:
   typedef YearMonthIntervalLit cpptype;
 
-  static const TypeID kStaticTypeID = kYearMonthInterval;
+  static constexpr TypeID kStaticTypeID = kYearMonthInterval;
+  static constexpr MemoryLayout kMemoryLayout = kCxxInlinePod;
 
   /**
-   * @brief Get a reference to the non-nullable singleton instance of this
-   *        Type.
+   * @brief Get a reference to the non-nullable singleton instance of this Type.
    *
    * @return A reference to the non-nullable singleton instance of this Type.
    **/

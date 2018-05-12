@@ -23,6 +23,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "expressions/scalar/ScalarLiteral.hpp"
@@ -32,6 +33,7 @@
 #include "query_optimizer/expressions/Expression.hpp"
 #include "query_optimizer/expressions/PatternMatcher.hpp"
 #include "types/Type.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 #include "utility/HashPair.hpp"
 
 #include "glog/logging.h"
@@ -42,6 +44,12 @@ namespace expressions {
 
 const Type& ScalarLiteral::getValueType() const {
   return value_type_;
+}
+
+std::pair<std::string, std::size_t> ScalarLiteral::generateNameWithPrecedence() const {
+  const std::string name =
+      value_.isNull() ? "NULL" : value_type_.printValueToString(value_);
+  return std::make_pair(name, kOperatorPrecedenceAtomicEntity);
 }
 
 ExpressionPtr ScalarLiteral::copyWithNewChildren(

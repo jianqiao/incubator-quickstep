@@ -159,6 +159,7 @@ QS_PROTOBUF_GENERATE_CPP(quickstep_utility_SortConfiguration_proto_srcs
                          SortConfiguration.proto)
 
 add_subdirectory(lip_filter)
+add_subdirectory(meta)
 
 # Declare micro-libs:
 add_library(quickstep_utility_Alignment ../empty_src.cpp Alignment.hpp)
@@ -204,7 +205,6 @@ add_library(quickstep_utility_SortConfiguration_proto
             ${quickstep_utility_SortConfiguration_proto_hdrs})
 add_library(quickstep_utility_SqlError SqlError.cpp SqlError.hpp)
 add_library(quickstep_utility_StringUtil StringUtil.cpp StringUtil.hpp)
-add_library(quickstep_utility_TemplateUtil ../empty_src.cpp TemplateUtil.hpp)
 add_library(quickstep_utility_ThreadSafeQueue ../empty_src.cpp ThreadSafeQueue.hpp)
 add_library(quickstep_utility_TreeStringSerializable ../empty_src.cpp TreeStringSerializable.hpp)
 add_library(quickstep_utility_VectorUtil ../empty_src.cpp VectorUtil.hpp)
@@ -393,7 +393,6 @@ target_link_libraries(quickstep_utility
                       quickstep_utility_SortConfiguration_proto
                       quickstep_utility_SqlError
                       quickstep_utility_StringUtil
-                      quickstep_utility_TemplateUtil
                       quickstep_utility_TextBasedTestDriver
                       quickstep_utility_ThreadSafeQueue
                       quickstep_utility_TreeStringSerializable
@@ -446,6 +445,18 @@ target_link_libraries(EqualsAnyConstant_unittest
                       gtest_main
                       quickstep_utility_EqualsAnyConstant)
 add_test(EqualsAnyConstant_unittest EqualsAnyConstant_unittest)
+
+add_executable(Meta_unittest "${CMAKE_CURRENT_SOURCE_DIR}/tests/Meta_unittest.cpp")
+target_link_libraries(Meta_unittest
+                      gtest
+                      gtest_main
+                      quickstep_types_DoubleType
+                      quickstep_types_FloatType
+                      quickstep_types_IntType
+                      quickstep_types_LongType
+                      quickstep_types_TypeID
+                      quickstep_utility_meta_Meta)
+add_test(Meta_unittest Meta_unittest)
 
 add_executable(NetworkUtil_unittest "${CMAKE_CURRENT_SOURCE_DIR}/tests/NetworkUtil_unittest.cpp")
 target_link_libraries(NetworkUtil_unittest
@@ -514,14 +525,6 @@ target_link_libraries(TreeStringSerializable_unittest
                       gtest_main
                       quickstep_utility_TreeStringSerializable)
 add_test(TreeStringSerializable_unittest TreeStringSerializable_unittest)
-
-add_executable(TemplateUtil_unittest "${CMAKE_CURRENT_SOURCE_DIR}/tests/TemplateUtil_unittest.cpp")
-target_link_libraries(TemplateUtil_unittest
-                      gtest
-                      gtest_main
-                      quickstep_utility_Macros
-                      quickstep_utility_TemplateUtil)
-add_test(TemplateUtil_unittest TemplateUtil_unittest)
 
 # Benchmarks:
 if (UNIX)

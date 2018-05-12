@@ -21,6 +21,7 @@
 #define QUICKSTEP_TYPES_TYPE_FACTORY_HPP_
 
 #include <cstddef>
+#include <string>
 
 #include "types/TypeID.hpp"
 #include "utility/Macros.hpp"
@@ -134,6 +135,14 @@ class TypeFactory {
    * @return The unifying type, or NULL if none exists.
    **/
   static const Type* GetUnifyingType(const Type &first, const Type &second);
+
+  /**
+   * @brief Parse a type from its string representation.
+   *
+   * @param type_name The string representation of a type.
+   * @return The type, or NULL if the input string cannot be parsed.
+   **/
+  static const Type* ParseTypeFromString(const std::string &type_name);
 
  private:
   // Undefined default constructor. Class is all-static and should not be

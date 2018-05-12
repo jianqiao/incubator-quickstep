@@ -22,7 +22,7 @@ package quickstep.serialization;
 import "types/Type.proto";
 
 message TypedValue {
-  required Type.TypeID type_id = 1;
+  required TypeID type_id = 1;
 
   // NOTE(zuyu): For a NULL value, none of the optional fields are filled in.
   optional int32 int_value = 2;

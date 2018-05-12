@@ -32,37 +32,48 @@
 #include "types/TypeErrors.hpp"
 #include "types/TypedValue.hpp"
 #include "types/containers/ColumnVector.hpp"
+#include "types/operations/OperationSignature.hpp"
 #include "types/operations/Operation.pb.h"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 
 #include "glog/logging.h"
 
 namespace quickstep {
 
-ScalarBinaryExpression::ScalarBinaryExpression(const BinaryOperation &operation,
+ScalarBinaryExpression::ScalarBinaryExpression(const OperationSignaturePtr &signature,
+                                               const BinaryOperation &operation,
                                                Scalar *left_operand,
                                                Scalar *right_operand)
-    : Scalar(*operation.resultTypeForArgumentTypes(left_operand->getType(),
-                                                   right_operand->getType())),
+    : Scalar(operation.resultTypeForSignature(signature)),
+      signature_(signature),
       operation_(operation),
       left_operand_(left_operand),
       right_operand_(right_operand) {
-  initHelper(false);
+  DCHECK(operation_.canApplyToSignature(signature_));
+  fast_operator_.reset(operation_.makeUncheckedBinaryOperatorForSignature(signature_));
+  if (left_operand_->hasStaticValue() && right_operand_->hasStaticValue()) {
+    static_value_ = std::make_unique<TypedValue>(
+        fast_operator_->applyToTypedValues(left_operand_->getStaticValue(),
+                                           right_operand_->getStaticValue()));
+    static_value_->ensureNotReference();
+  }
 }
 
 serialization::Scalar ScalarBinaryExpression::getProto() const {
   serialization::Scalar proto;
   proto.set_data_source(serialization::Scalar::BINARY_EXPRESSION);
-  proto.MutableExtension(serialization::ScalarBinaryExpression::operation)->CopyFrom(operation_.getProto());
-  proto.MutableExtension(serialization::ScalarBinaryExpression::left_operand)->CopyFrom(left_operand_->getProto());
-  proto.MutableExtension(serialization::ScalarBinaryExpression::right_operand)->CopyFrom(right_operand_->getProto());
-
+  proto.MutableExtension(serialization::ScalarBinaryExpression::signature)
+      ->MergeFrom(signature_->getProto());
+  proto.MutableExtension(serialization::ScalarBinaryExpression::left_operand)
+      ->MergeFrom(left_operand_->getProto());
+  proto.MutableExtension(serialization::ScalarBinaryExpression::right_operand)
+      ->MergeFrom(right_operand_->getProto());
   return proto;
 }
 
 Scalar* ScalarBinaryExpression::clone() const {
-  return new ScalarBinaryExpression(operation_,
+  return new ScalarBinaryExpression(signature_,
+                                    operation_,
                                     left_operand_->clone(),
                                     right_operand_->clone());
 }
@@ -70,7 +81,7 @@ Scalar* ScalarBinaryExpression::clone() const {
 TypedValue ScalarBinaryExpression::getValueForSingleTuple(const ValueAccessor &accessor,
                                                           const tuple_id tuple) const {
   if (fast_operator_.get() == nullptr) {
-    return static_value_.makeReferenceToThis();
+    return static_value_->makeReferenceToThis();
   } else {
     return fast_operator_->applyToTypedValues(left_operand_->getValueForSingleTuple(accessor, tuple),
                                               right_operand_->getValueForSingleTuple(accessor, tuple));
@@ -83,7 +94,7 @@ TypedValue ScalarBinaryExpression::getValueForJoinedTuples(
     const ValueAccessor &right_accessor,
     const tuple_id right_tuple_id) const {
   if (fast_operator_.get() == nullptr) {
-    return static_value_.makeReferenceToThis();
+    return static_value_->makeReferenceToThis();
   } else {
     return fast_operator_->applyToTypedValues(
         left_operand_->getValueForJoinedTuples(left_accessor,
@@ -104,7 +115,7 @@ ColumnVectorPtr ScalarBinaryExpression::getAllValues(
   if (fast_operator_.get() == nullptr) {
     return ColumnVectorPtr(
         ColumnVector::MakeVectorOfValue(getType(),
-                                        static_value_,
+                                        *static_value_,
                                         accessor->getNumTuplesVirtual()));
   } else {
     // NOTE(chasseur): We don't check if BOTH operands have a static value,
@@ -200,7 +211,7 @@ ColumnVectorPtr ScalarBinaryExpression::getAllValuesForJoin(
   if (fast_operator_.get() == nullptr) {
     return ColumnVectorPtr(
         ColumnVector::MakeVectorOfValue(getType(),
-                                        static_value_,
+                                        *static_value_,
                                         joined_tuple_ids.size()));
   } else {
     if (left_operand_->hasStaticValue()) {
@@ -342,31 +353,6 @@ ColumnVectorPtr ScalarBinaryExpression::getAllValuesForJoin(
   }
 }
 
-void ScalarBinaryExpression::initHelper(bool own_children) {
-  if (operation_.canApplyToTypes(left_operand_->getType(), right_operand_->getType())) {
-    if (left_operand_->hasStaticValue() && right_operand_->hasStaticValue()) {
-      static_value_ = operation_.applyToChecked(left_operand_->getStaticValue(),
-                                                left_operand_->getType(),
-                                                right_operand_->getStaticValue(),
-                                                right_operand_->getType());
-    } else {
-      fast_operator_.reset(operation_.makeUncheckedBinaryOperatorForTypes(left_operand_->getType(),
-                                                                           right_operand_->getType()));
-    }
-  } else {
-    const Type &left_operand_type = left_operand_->getType();
-    const Type &right_operand_type = right_operand_->getType();
-    if (!own_children) {
-      left_operand_.release();
-      right_operand_.release();
-    }
-    throw OperationInapplicableToType(operation_.getName(),
-                                      2,
-                                      left_operand_type.getName().c_str(),
-                                      right_operand_type.getName().c_str());
-  }
-}
-
 void ScalarBinaryExpression::getFieldStringItems(
     std::vector<std::string> *inline_field_names,
     std::vector<std::string> *inline_field_values,
@@ -381,19 +367,17 @@ void ScalarBinaryExpression::getFieldStringItems(
                               container_child_field_names,
                               container_child_fields);
 
-  if (fast_operator_ == nullptr) {
+  if (static_value_ != nullptr) {
     inline_field_names->emplace_back("static_value");
-    if (static_value_.isNull()) {
+    if (static_value_->isNull()) {
       inline_field_values->emplace_back("NULL");
     } else {
-      inline_field_values->emplace_back(type_.printValueToString(static_value_));
+      inline_field_values->emplace_back(type_.printValueToString(*static_value_));
     }
   }
 
-  inline_field_names->emplace_back("operation");
-  inline_field_values->emplace_back(
-      kBinaryOperationNames[static_cast<std::underlying_type<BinaryOperationID>::type>(
-          operation_.getBinaryOperationID())]);
+  inline_field_names->emplace_back("signature");
+  inline_field_values->emplace_back(signature_->toString());
 
   non_container_child_field_names->emplace_back("left_operand");
   non_container_child_fields->emplace_back(left_operand_.get());

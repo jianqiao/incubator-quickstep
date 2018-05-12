@@ -59,6 +59,9 @@ typedef std::shared_ptr<const GeneratorFunctionHandle> GeneratorFunctionHandlePt
  **/
 class GeneratorFunctionHandle {
  public:
+  /**
+   * @brief Virtual destructor.
+   */
   virtual ~GeneratorFunctionHandle() {}
 
   /**

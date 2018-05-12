@@ -19,14 +19,17 @@
 
 #include "query_optimizer/expressions/SubqueryExpression.hpp"
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "query_optimizer/OptimizerTree.hpp"
 #include "query_optimizer/expressions/AttributeReference.hpp"
 #include "query_optimizer/expressions/ExprId.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 
 #include "glog/logging.h"
 
@@ -37,6 +40,10 @@ class Scalar;
 
 namespace optimizer {
 namespace expressions {
+
+std::pair<std::string, std::size_t> SubqueryExpression::generateNameWithPrecedence() const {
+  return std::make_pair("$subquery$", kOperatorPrecedenceAtomicEntity);
+}
 
 ::quickstep::Scalar* SubqueryExpression::concretize(
     const std::unordered_map<ExprId, const CatalogAttribute*> &substitution_map,

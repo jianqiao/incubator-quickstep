@@ -25,6 +25,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "query_optimizer/OptimizerTree.hpp"
@@ -86,6 +87,8 @@ class ScalarLiteral : public Scalar {
       const std::unordered_set<ExprId> &right_expr_ids = std::unordered_set<ExprId>()) const override;
 
   bool equals(const ScalarPtr &other) const override;
+
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
 
   /**
    * @brief Creates an immutable ScalarLiteral.

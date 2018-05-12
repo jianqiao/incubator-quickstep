@@ -46,6 +46,8 @@ using std::snprintf;
 
 namespace quickstep {
 
+constexpr TypeID DateType::kStaticTypeID;
+
 bool DateType::isCoercibleFrom(const Type &original_type) const {
   QUICKSTEP_NULL_COERCIBILITY_CHECK();
   return (original_type.getTypeID() == kDate);

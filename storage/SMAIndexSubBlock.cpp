@@ -45,8 +45,6 @@
 #include "types/TypeID.hpp"
 #include "types/TypedValue.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 #include "types/operations/comparisons/Comparison.hpp"
 #include "types/operations/comparisons/ComparisonFactory.hpp"
 #include "types/operations/comparisons/ComparisonID.hpp"
@@ -354,16 +352,19 @@ SMAIndexSubBlock::SMAIndexSubBlock(const TupleStorageSubBlock &tuple_store,
     SMAEntry *entry = entries_ + indexed_attribute_num;
 
     // Initialize the operator map.
-    if (sma_internal::canApplySumToType(attribute_type.getTypeID())) {
-      TypeID attr_typeid = attribute_type.getTypeID();
-      TypeID attr_sum_typeid = sma_internal::getTypeForSum(attr_typeid);
-      if (add_operations_.elementIsNullAt(attr_typeid)) {
-        add_operations_.replaceElement(attr_typeid,
-          BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
-              .makeUncheckedBinaryOperatorForTypes(TypeFactory::GetType(attr_typeid),
-                                                   TypeFactory::GetType(attr_sum_typeid)));
-      }
-    }
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//    if (sma_internal::canApplySumToType(attribute_type.getTypeID())) {
+//      TypeID attr_typeid = attribute_type.getTypeID();
+//      TypeID attr_sum_typeid = sma_internal::getTypeForSum(attr_typeid);
+//      if (add_operations_.elementIsNullAt(attr_typeid)) {
+//        add_operations_.replaceElement(attr_typeid,
+//          BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
+//              .makeUncheckedBinaryOperatorForTypes(TypeFactory::GetType(attr_typeid),
+//                                                   TypeFactory::GetType(attr_sum_typeid)));
+//      }
+//    }
 
     // Initialize comparison map. Maps attribute type to comparison function.
     int attr_typeid = static_cast<int>(attribute_type.getTypeID());

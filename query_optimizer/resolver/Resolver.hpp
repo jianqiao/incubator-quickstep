@@ -482,16 +482,13 @@ class Resolver {
       ExpressionResolutionInfo *expression_resolution_info);
 
   /**
-   * @brief Resolves a function call. For a non-scalar function, the returned
-   *        expression is an AttributeReference to the actual resolved expression.
-   *
-   * @note This currently only handles resolving aggregate functions and window
-   *       aggregate functions.
+   * @brief Resolves a scalar / aggregate / window aggregate function call.
+   *        The returned expression is an AttributeReference to the actual
+   *        resolved expression.
    *
    * @param parse_function_call The function call to be resolved.
    * @param expression_resolution_info Resolution info that contains the name
-   *                                   resolver and info to be updated after
-   *                                   resolution.
+   *        resolver and info to be updated after resolution.
    * @return An expression in the query optimizer.
    */
   expressions::ScalarPtr resolveFunctionCall(
@@ -499,21 +496,34 @@ class Resolver {
       ExpressionResolutionInfo *expression_resolution_info);
 
   /**
+   * @brief Resolves a scalar function call.
+   *
+   * @param parse_function_call The function call to be resolved.
+   * @param resolved_arguments The resolved arguments.
+   * @param expression_resolution_info Resolution info that contains the name
+   *        resolver and info to be updated after resolution.
+   * @return An expression in the query optimizer.
+   */
+  expressions::ScalarPtr resolveScalarFunction(
+      const ParseFunctionCall &parse_function_call,
+      const std::vector<expressions::ScalarPtr> &resolved_arguments,
+      ExpressionResolutionInfo *expression_resolution_info);
+
+  /**
    * @brief Resolves a window aggregate function.
    *
    * @param parse_function_call The function call to be resolved.
-   * @param expression_resolution_info Resolution info that contains the name
-   *                                   resolver and info to be updated after
-   *                                   resolution.
    * @param aggregate The window aggregate function.
    * @param resolved_arguments The resolved arguments.
+   * @param expression_resolution_info Resolution info that contains the name
+   *        resolver and info to be updated after resolution.
    * @return An expression in the query optimizer.
    */
   expressions::ScalarPtr resolveWindowAggregateFunction(
       const ParseFunctionCall &parse_function_call,
-      ExpressionResolutionInfo *expression_resolution_info,
       const ::quickstep::WindowAggregateFunction *aggregate,
-      const std::vector<expressions::ScalarPtr> &resolved_arguments);
+      const std::vector<expressions::ScalarPtr> &resolved_arguments,
+      ExpressionResolutionInfo *expression_resolution_info);
 
   /**
    * @brief Resolves a parse Predicate and converts it to a predicate in the
@@ -521,8 +531,7 @@ class Resolver {
    *
    * @param parse_predicate The parse predicate to be resolved.
    * @param expression_resolution_info Resolution info that contains the name
-   *                                   resolver and info to be updated after
-   *                                   resolution.
+   *        resolver and info to be updated after resolution.
    * @return A predicate in the query optimizer
    */
   expressions::PredicatePtr resolvePredicate(
@@ -535,8 +544,7 @@ class Resolver {
    *
    * @param parse_predicates Parse predicates to be resolved.
    * @param expression_resolution_info Resolution info that contains the name
-   *                                   resolver and info to be updated after
-   *                                   resolution.
+   *        resolver and info to be updated after resolution.
    * @return Resolved predicates in the query optimizer
    */
   std::vector<expressions::PredicatePtr> resolvePredicates(

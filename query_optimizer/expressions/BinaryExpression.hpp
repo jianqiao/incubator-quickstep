@@ -20,10 +20,12 @@
 #ifndef QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_BINARY_EXPRESSION_HPP_
 #define QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_BINARY_EXPRESSION_HPP_
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "query_optimizer/OptimizerTree.hpp"
@@ -32,6 +34,8 @@
 #include "query_optimizer/expressions/Expression.hpp"
 #include "query_optimizer/expressions/ExpressionType.hpp"
 #include "query_optimizer/expressions/Scalar.hpp"
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/binary_operations/BinaryOperation.hpp"
 #include "utility/Macros.hpp"
 
 namespace quickstep {
@@ -62,11 +66,18 @@ class BinaryExpression : public Scalar {
 
   std::string getName() const override;
 
-  const Type& getValueType() const override;
+  const Type& getValueType() const override {
+    return result_type_;
+  }
 
   bool isConstant() const override {
     return left_->isConstant() && right_->isConstant();
   }
+
+  /**
+   * @return The query-time signature of the binary operation.
+   */
+  const OperationSignaturePtr signature() const { return signature_; }
 
   /**
    * @return The binary operation.
@@ -95,10 +106,23 @@ class BinaryExpression : public Scalar {
 
   bool equals(const ScalarPtr &other) const override;
 
-  static BinaryExpressionPtr Create(const BinaryOperation &operation,
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
+
+  /**
+   * @brief Creates an immutable BinaryExpression.
+   *
+   * @param signature The query-time signature of the operation.
+   * @param operation The binary operation.
+   * @param left The left operand.
+   * @param right The right operand.
+   * @return An immutable BinaryExpression that applies the operation to the
+   *         operands.
+   */
+  static BinaryExpressionPtr Create(const OperationSignaturePtr &signature,
+                                    const BinaryOperation &operation,
                                     const ScalarPtr &left,
                                     const ScalarPtr &right) {
-    return BinaryExpressionPtr(new BinaryExpression(operation, left, right));
+    return BinaryExpressionPtr(new BinaryExpression(signature, operation, left, right));
   }
 
  protected:
@@ -113,14 +137,16 @@ class BinaryExpression : public Scalar {
       std::vector<std::vector<OptimizerTreeBaseNodePtr>> *container_child_fields) const override;
 
  private:
-  BinaryExpression(const BinaryOperation &operation,
+  BinaryExpression(const OperationSignaturePtr &signature,
+                   const BinaryOperation &operation,
                    const ScalarPtr &left,
                    const ScalarPtr &right);
 
+  const OperationSignaturePtr signature_;
   const BinaryOperation &operation_;
-
   const ScalarPtr left_;
   const ScalarPtr right_;
+  const Type &result_type_;
 
   DISALLOW_COPY_AND_ASSIGN(BinaryExpression);
 };

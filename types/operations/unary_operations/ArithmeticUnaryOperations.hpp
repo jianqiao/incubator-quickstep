@@ -20,72 +20,64 @@
 #ifndef QUICKSTEP_TYPES_OPERATIONS_UNARY_OPERATIONS_ARITHMETIC_UNARY_OPERATIONS_HPP_
 #define QUICKSTEP_TYPES_OPERATIONS_UNARY_OPERATIONS_ARITHMETIC_UNARY_OPERATIONS_HPP_
 
-#include "types/TypedValue.hpp"
-#include "types/operations/unary_operations/UnaryOperation.hpp"
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
-#include "utility/Macros.hpp"
+#include "types/DatetimeIntervalType.hpp"
+#include "types/DoubleType.hpp"
+#include "types/FloatType.hpp"
+#include "types/IntType.hpp"
+#include "types/LongType.hpp"
+#include "types/YearMonthIntervalType.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
+#include "types/operations/unary_operations/UnaryFunctor.hpp"
+#include "utility/meta/StringConstant.hpp"
+#include "utility/meta/TypeList.hpp"
 
 namespace quickstep {
-
-class Type;
 
 /** \addtogroup Types
  *  @{
  */
 
-/**
- * @brief A UnaryOperation which applies to and yields numeric values.
- **/
-class ArithmeticUnaryOperation : public UnaryOperation {
- public:
-  bool canApplyToType(const Type &type) const override;
-
-  const Type* resultTypeForArgumentType(const Type &type) const override;
-
-  const Type* pushDownTypeHint(const Type *type_hint) const override;
-
- protected:
-  explicit ArithmeticUnaryOperation(const UnaryOperationID operation_id)
-      : UnaryOperation(operation_id) {
+template <typename TypeClass>
+struct NegateFunctor : public UnaryFunctor<STR_CONST8("Negate"),
+                                           STR_CONST8("-"),
+                                           kOperatorPrecedenceUnaryMinus,
+                                           TypeClass,
+                                           TypeClass> {
+  inline void operator()(const typename TypeClass::cpptype *argument,
+                         typename TypeClass::cpptype *result) const {
+    *result = -(*argument);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ArithmeticUnaryOperation);
 };
 
-/**
- * @brief The UnaryOperation for negation.
- **/
-class NegateUnaryOperation : public ArithmeticUnaryOperation {
- public:
-  /**
-   * @brief Get a reference to the singleton instance of this Operation.
-   *
-   * @return A reference to the singleton instance of this Operation.
-   **/
-  static const NegateUnaryOperation& Instance() {
-    static NegateUnaryOperation instance;
-    return instance;
+template <typename TypeClass>
+struct SgnFunctor : public UnaryFunctor<STR_CONST8("Sgn"),
+                                        STR_CONST8("Sgn"),
+                                        kOperatorPrecedenceFunctionCall,
+                                        TypeClass,
+                                        IntType> {
+  inline void operator()(const typename TypeClass::cpptype *argument,
+                         int *result) const {
+    *result = (*argument > 0) - (*argument < 0);
   }
-
-  const Type* fixedNullableResultType() const override {
-    return nullptr;
-  }
-
-  bool resultTypeIsPlausible(const Type &result_type) const override;
-
-  TypedValue applyToChecked(const TypedValue &argument,
-                            const Type &argument_type) const override;
-
-  UncheckedUnaryOperator* makeUncheckedUnaryOperatorForType(const Type &type) const override;
-
- private:
-  NegateUnaryOperation()
-      : ArithmeticUnaryOperation(UnaryOperationID::kNegate) {
-  }
-
-  DISALLOW_COPY_AND_ASSIGN(NegateUnaryOperation);
 };
+
+// ----------------------------------------------------------------------------
+// List of arithmetic unary functions.
+
+using NegateFunctors =
+    meta::TypeList<IntType, LongType, FloatType, DoubleType,
+                   DatetimeIntervalType, YearMonthIntervalType>
+        ::apply<meta::TraitWrapper<NegateFunctor>::type>;
+
+using SgnFunctors =
+    meta::TypeList<IntType, LongType, FloatType, DoubleType>
+        ::apply<meta::TraitWrapper<SgnFunctor>::type>;
+
+// ----------------------------------------------------------------------------
+// All-in-one packing.
+
+using ArithmeticUnaryFunctors = meta::TypeList<NegateFunctors,
+                                               SgnFunctors>;
 
 /** @} */
 

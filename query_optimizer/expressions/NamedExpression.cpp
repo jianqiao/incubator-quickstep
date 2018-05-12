@@ -19,15 +19,22 @@
 
 #include "query_optimizer/expressions/NamedExpression.hpp"
 
+#include <cstddef>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "query_optimizer/OptimizerTree.hpp"
 #include "types/Type.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 
 namespace quickstep {
 namespace optimizer {
 namespace expressions {
+
+std::pair<std::string, std::size_t> NamedExpression::generateNameWithPrecedence() const {
+  return std::make_pair(attribute_alias_, kOperatorPrecedenceAtomicEntity);
+}
 
 void NamedExpression::getFieldStringItems(
     std::vector<std::string> *inline_field_names,

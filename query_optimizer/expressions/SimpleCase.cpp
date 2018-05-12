@@ -38,6 +38,7 @@
 #include "query_optimizer/expressions/Predicate.hpp"
 #include "query_optimizer/expressions/Scalar.hpp"
 #include "types/Type.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 #include "types/operations/comparisons/ComparisonID.hpp"
 #include "types/operations/comparisons/ComparisonFactory.hpp"
 #include "utility/Cast.hpp"
@@ -65,6 +66,10 @@ bool SimpleCase::isConstant() const {
     }
   }
   return (else_result_expression_ == nullptr || else_result_expression_->isConstant());
+}
+
+std::pair<std::string, std::size_t> SimpleCase::generateNameWithPrecedence() const {
+  return std::make_pair("$case$", kOperatorPrecedenceAtomicEntity);
 }
 
 std::vector<AttributeReferencePtr> SimpleCase::getReferencedAttributes() const {

@@ -45,8 +45,6 @@
 #include "query_optimizer/physical/Selection.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 #include "utility/HashError.hpp"
 
 #include "gflags/gflags.h"
@@ -316,19 +314,22 @@ P::PhysicalPtr ReuseAggregateExpressions::applyToNode(
             sum_attr = agg_attrs[agg_ref->first_ref];
           }
 
-          // Obtain AVG by evaluating SUM/COUNT in Selection.
-          const BinaryOperation &divide_op =
-              BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide);
-          const E::BinaryExpressionPtr avg_expr =
-              E::BinaryExpression::Create(divide_op,
-                                          sum_attr,
-                                          agg_attrs[agg_ref->second_ref]);
-          new_select_exprs.emplace_back(
-              E::Alias::Create(agg_expr->id(),
-                               avg_expr,
-                               agg_expr->attribute_name(),
-                               agg_expr->attribute_alias(),
-                               agg_expr->relation_name()));
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//          // Obtain AVG by evaluating SUM/COUNT in Selection.
+//          const BinaryOperation &divide_op =
+//              BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide);
+//          const E::BinaryExpressionPtr avg_expr =
+//              E::BinaryExpression::Create(divide_op,
+//                                          sum_attr,
+//                                          agg_attrs[agg_ref->second_ref]);
+//          new_select_exprs.emplace_back(
+//              E::Alias::Create(agg_expr->id(),
+//                               avg_expr,
+//                               agg_expr->attribute_name(),
+//                               agg_expr->attribute_alias(),
+//                               agg_expr->relation_name()));
           break;
         }
       }

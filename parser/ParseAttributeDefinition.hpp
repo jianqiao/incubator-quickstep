@@ -42,15 +42,29 @@ template <class T> class PtrList;
 /**
  * @brief Parsed representation of a data type.
  **/
-class ParseDataType {
+class ParseDataType : public ParseTreeNode {
  public:
   /**
    * @brief Constructor.
    *
+   * @param line_number Line number of this data type in the SQL statement.
+   * @param column_number Column number of this data type in the SQL statement.
    * @param type The Type of the data.
    **/
-  explicit ParseDataType(const Type &type)
-      : type_(&type) {
+  ParseDataType(const int line_number,
+                const int column_number,
+                const Type &type)
+      : ParseTreeNode(line_number, column_number),
+        type_(&type) {
+  }
+
+  /**
+   * @brief Destructor
+   **/
+  ~ParseDataType() override {}
+
+  std::string getName() const override {
+    return "DataType";
   }
 
   /**
@@ -61,6 +75,15 @@ class ParseDataType {
   const Type& getType() const {
     return *type_;
   }
+
+ protected:
+  void getFieldStringItems(
+      std::vector<std::string> *inline_field_names,
+      std::vector<std::string> *inline_field_values,
+      std::vector<std::string> *non_container_child_field_names,
+      std::vector<const ParseTreeNode*> *non_container_child_fields,
+      std::vector<std::string> *container_child_field_names,
+      std::vector<std::vector<const ParseTreeNode*>> *container_child_fields) const override;
 
  private:
   // Use a pointer instead of a reference so that it may be modified by column

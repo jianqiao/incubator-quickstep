@@ -45,6 +45,9 @@ namespace quickstep {
  **/
 class VarCharType : public AsciiStringSuperType {
  public:
+  static constexpr TypeID kStaticTypeID = kVarChar;
+  static constexpr MemoryLayout kMemoryLayout = kParOutOfLinePod;
+
   /**
    * @brief Get a reference to the non-nullable singleton instance of this Type
    *        for the specified length.

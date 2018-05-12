@@ -22,8 +22,10 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 #include "query_optimizer/expressions/Expression.hpp"
 #include "query_optimizer/expressions/ExprId.hpp"
@@ -95,6 +97,15 @@ class Scalar : public Expression {
     }
     return *hash_cache_;
   }
+
+  /**
+   * @brief Get a human-readable representation of this scalar expression
+   *        together with the top-level operator's precedence information.
+   *
+   * @return The human-readable form of this scalar expression together with
+   *         the top-level operator's precedence information as a pair.
+   **/
+  virtual std::pair<std::string, std::size_t> generateNameWithPrecedence() const = 0;
 
  protected:
   Scalar() {}

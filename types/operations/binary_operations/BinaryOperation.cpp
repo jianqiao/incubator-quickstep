@@ -19,35 +19,28 @@
 
 #include "types/operations/binary_operations/BinaryOperation.hpp"
 
-#include "types/operations/Operation.pb.h"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
-#include "utility/Macros.hpp"
+#include <cstddef>
+#include <string>
+
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 
 namespace quickstep {
 
-serialization::BinaryOperation BinaryOperation::getProto() const {
-  serialization::BinaryOperation proto;
-  switch (operation_id_) {
-    case BinaryOperationID::kAdd:
-      proto.set_operation_id(serialization::BinaryOperation::ADD);
-      break;
-    case BinaryOperationID::kSubtract:
-      proto.set_operation_id(serialization::BinaryOperation::SUBTRACT);
-      break;
-    case BinaryOperationID::kMultiply:
-      proto.set_operation_id(serialization::BinaryOperation::MULTIPLY);
-      break;
-    case BinaryOperationID::kDivide:
-      proto.set_operation_id(serialization::BinaryOperation::DIVIDE);
-      break;
-    case BinaryOperationID::kModulo:
-      proto.set_operation_id(serialization::BinaryOperation::MODULO);
-      break;
-    default:
-      FATAL_ERROR("Unrecognized BinaryOperationID");
+std::string BinaryOperation::formatExpression(const OperationSignaturePtr &signature,
+                                              const std::string &left,
+                                              const std::size_t left_precedence,
+                                              const std::string &right,
+                                              const std::size_t right_precedence) const {
+  const std::size_t precedence = getOperatorPrecedence();
+  if (precedence != kOperatorPrecedenceFunctionCall) {
+    std::string expression;
+    expression.append(precedence <= left_precedence ? "(" + left + ")" : left);
+    expression.append(getShortName());
+    expression.append(precedence <= right_precedence ? "(" + right + ")" : right);
+    return expression;
   }
-
-  return proto;
+  return getName() + "(" + left + "," + right + ")";
 }
 
 }  // namespace quickstep

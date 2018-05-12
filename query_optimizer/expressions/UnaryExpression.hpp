@@ -25,6 +25,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "query_optimizer/expressions/AttributeReference.hpp"
@@ -61,10 +62,17 @@ class UnaryExpression : public Scalar {
 
   std::string getName() const override;
 
-  bool isConstant() const override { return operand_->isConstant(); }
+  bool isConstant() const override {
+    return operand_->isConstant();
+  }
 
   /**
-   * @return The unary operator.
+   * @return The query-time signature of the unary operation.
+   */
+  const OperationSignaturePtr signature() const { return signature_; }
+
+  /**
+   * @return The unary operation.
    */
   const UnaryOperation& operation() const { return operation_; }
 
@@ -74,7 +82,7 @@ class UnaryExpression : public Scalar {
   const ScalarPtr& operand() const { return operand_; }
 
   const Type& getValueType() const override {
-    return *(operation_.resultTypeForArgumentType(operand_->getValueType()));
+    return result_type_;
   }
 
   ExpressionPtr copyWithNewChildren(
@@ -91,17 +99,21 @@ class UnaryExpression : public Scalar {
 
   bool equals(const ScalarPtr &other) const override;
 
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
+
   /**
    * @brief Creates an immutable UnaryExpression.
    *
+   * @param signature The query-time signature of the operation.
    * @param operation The unary operation.
    * @param operand The operand.
    * @return An immutable UnaryExpression that applies the operation to the
    *         operand.
    */
-  static UnaryExpressionPtr Create(const UnaryOperation &operation,
+  static UnaryExpressionPtr Create(const OperationSignaturePtr &signature,
+                                   const UnaryOperation &operation,
                                    const ScalarPtr &operand) {
-    return UnaryExpressionPtr(new UnaryExpression(operation, operand));
+    return UnaryExpressionPtr(new UnaryExpression(signature, operation, operand));
   }
 
  protected:
@@ -116,15 +128,21 @@ class UnaryExpression : public Scalar {
       std::vector<std::vector<OptimizerTreeBaseNodePtr>> *container_child_fields) const override;
 
  private:
-  UnaryExpression(const UnaryOperation &operation,
+  UnaryExpression(const OperationSignaturePtr &signature,
+                  const UnaryOperation &operation,
                   const ScalarPtr &operand)
-      : operation_(operation), operand_(operand) {
-    DCHECK(operation_.canApplyToType(operand_->getValueType())) << toString();
+      : signature_(signature),
+        operation_(operation),
+        operand_(operand),
+        result_type_(operation_.resultTypeForSignature(signature_)) {
+    DCHECK(operation_.canApplyToSignature(signature_)) << toString();
     addChild(operand);
   }
 
+  const OperationSignaturePtr signature_;
   const UnaryOperation &operation_;
   const ScalarPtr operand_;
+  const Type &result_type_;
 
   DISALLOW_COPY_AND_ASSIGN(UnaryExpression);
 };

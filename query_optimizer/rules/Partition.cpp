@@ -50,8 +50,6 @@
 #include "query_optimizer/physical/TableReference.hpp"
 #include "query_optimizer/physical/TopLevelPlan.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 #include "utility/Cast.hpp"
 #include "utility/EqualsAnyConstant.hpp"
 
@@ -407,22 +405,25 @@ P::PhysicalPtr Partition::applyToNode(const P::PhysicalPtr &node) {
       for (const E::AttributeReferencePtr &non_recompute_aggregate_expression : non_recompute_aggregate_expressions) {
         project_expressions.emplace_back(non_recompute_aggregate_expression);
       }
-      for (const auto &avg_recompute_expression : avg_recompute_expressions) {
-        const auto &avg_expr = get<0>(avg_recompute_expression);
-        // Obtain AVG by evaluating SUM/COUNT in Selection.
-        const BinaryOperation &divide_op =
-            BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide);
-        const E::BinaryExpressionPtr new_avg_expr =
-            E::BinaryExpression::Create(divide_op,
-                                        get<1>(avg_recompute_expression),
-                                        get<2>(avg_recompute_expression));
-        project_expressions.emplace_back(
-            E::Alias::Create(avg_expr->id(),
-                             new_avg_expr,
-                             avg_expr->attribute_name(),
-                             avg_expr->attribute_alias(),
-                             avg_expr->relation_name()));
-      }
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//      for (const auto &avg_recompute_expression : avg_recompute_expressions) {
+//        const auto &avg_expr = get<0>(avg_recompute_expression);
+//        // Obtain AVG by evaluating SUM/COUNT in Selection.
+//        const BinaryOperation &divide_op =
+//            BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kDivide);
+//        const E::BinaryExpressionPtr new_avg_expr =
+//            E::BinaryExpression::Create(divide_op,
+//                                        get<1>(avg_recompute_expression),
+//                                        get<2>(avg_recompute_expression));
+//        project_expressions.emplace_back(
+//            E::Alias::Create(avg_expr->id(),
+//                             new_avg_expr,
+//                             avg_expr->attribute_name(),
+//                             avg_expr->attribute_alias(),
+//                             avg_expr->relation_name()));
+//      }
 
       if (!grouping_expressions.empty()) {
         output_partition_scheme_header =

@@ -47,6 +47,9 @@ enum class LIPFilterType {
  */
 class LIPFilter {
  public:
+  /**
+   * @brief Virtual destructor.
+   */
   virtual ~LIPFilter() {}
 
   /**

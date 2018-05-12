@@ -64,6 +64,11 @@ class TypedValue;
 class GeneratorFunction {
  public:
   /**
+   * @brief Virtual destructor.
+   */
+  virtual ~GeneratorFunction() {}
+
+  /**
    * @brief Get the name of this generator function. The name should be unique
    * as it is used to register this function into the generator function pool.
    *

@@ -32,45 +32,51 @@
 #include "types/TypeErrors.hpp"
 #include "types/TypedValue.hpp"
 #include "types/containers/ColumnVector.hpp"
+#include "types/operations/OperationSignature.hpp"
 #include "types/operations/Operation.pb.h"
 #include "types/operations/unary_operations/UnaryOperation.hpp"
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
-
-#ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_JOIN
-#include "glog/logging.h"
-#endif  // QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_JOIN
 
 namespace quickstep {
 
 struct SubBlocksReference;
 
-ScalarUnaryExpression::ScalarUnaryExpression(const UnaryOperation &operation,
+ScalarUnaryExpression::ScalarUnaryExpression(const OperationSignaturePtr &signature,
+                                             const UnaryOperation &operation,
                                              Scalar *operand)
-    : Scalar(*operation.resultTypeForArgumentType(operand->getType())),
+    : Scalar(operation.resultTypeForSignature(signature)),
+      signature_(signature),
       operation_(operation),
       operand_(operand) {
-  initHelper(false);
+  DCHECK(operation_.canApplyToSignature(signature_));
+  fast_operator_.reset(operation_.makeUncheckedUnaryOperatorForSignature(signature_));
+  if (operand_->hasStaticValue()) {
+    static_value_ = std::make_unique<TypedValue>(
+        fast_operator_->applyToTypedValue(operand_->getStaticValue()));
+    static_value_->ensureNotReference();
+  }
 }
 
 serialization::Scalar ScalarUnaryExpression::getProto() const {
   serialization::Scalar proto;
   proto.set_data_source(serialization::Scalar::UNARY_EXPRESSION);
-  proto.MutableExtension(serialization::ScalarUnaryExpression::operation)->CopyFrom(operation_.getProto());
-  proto.MutableExtension(serialization::ScalarUnaryExpression::operand)->CopyFrom(operand_->getProto());
-
+  proto.MutableExtension(serialization::ScalarUnaryExpression::signature)
+      ->MergeFrom(signature_->getProto());
+  proto.MutableExtension(serialization::ScalarUnaryExpression::operand)
+      ->MergeFrom(operand_->getProto());
   return proto;
 }
 
 Scalar* ScalarUnaryExpression::clone() const {
-  return new ScalarUnaryExpression(operation_, operand_->clone());
+  return new ScalarUnaryExpression(signature_, operation_, operand_->clone());
 }
 
 TypedValue ScalarUnaryExpression::getValueForSingleTuple(const ValueAccessor &accessor,
                                                          const tuple_id tuple) const {
-  if (fast_operator_.get() == nullptr) {
-    return static_value_.makeReferenceToThis();
+  if (static_value_ != nullptr) {
+    return static_value_->makeReferenceToThis();
   } else {
-    return fast_operator_->applyToTypedValue(operand_->getValueForSingleTuple(accessor, tuple));
+    return fast_operator_->applyToTypedValue(
+        operand_->getValueForSingleTuple(accessor, tuple));
   }
 }
 
@@ -79,13 +85,14 @@ TypedValue ScalarUnaryExpression::getValueForJoinedTuples(
     const tuple_id left_tuple_id,
     const ValueAccessor &right_accessor,
     const tuple_id right_tuple_id) const {
-  if (fast_operator_.get() == nullptr) {
-    return static_value_.makeReferenceToThis();
+  if (static_value_ != nullptr) {
+    return static_value_->makeReferenceToThis();
   } else {
-    return fast_operator_->applyToTypedValue(operand_->getValueForJoinedTuples(left_accessor,
-                                                                               left_tuple_id,
-                                                                               right_accessor,
-                                                                               right_tuple_id));
+    return fast_operator_->applyToTypedValue(
+        operand_->getValueForJoinedTuples(left_accessor,
+                                          left_tuple_id,
+                                          right_accessor,
+                                          right_tuple_id));
   }
 }
 
@@ -93,10 +100,10 @@ ColumnVectorPtr ScalarUnaryExpression::getAllValues(
     ValueAccessor *accessor,
     const SubBlocksReference *sub_blocks_ref,
     ColumnVectorCache *cv_cache) const {
-  if (fast_operator_.get() == nullptr) {
+  if (static_value_ != nullptr) {
     return ColumnVectorPtr(
         ColumnVector::MakeVectorOfValue(getType(),
-                                        static_value_,
+                                        *static_value_,
                                         accessor->getNumTuplesVirtual()));
   } else {
 #ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_SELECTION
@@ -119,28 +126,12 @@ ColumnVectorPtr ScalarUnaryExpression::getAllValuesForJoin(
     ValueAccessor *right_accessor,
     const std::vector<std::pair<tuple_id, tuple_id>> &joined_tuple_ids,
     ColumnVectorCache *cv_cache) const {
-  if (fast_operator_.get() == nullptr) {
+  if (static_value_ != nullptr) {
     return ColumnVectorPtr(
         ColumnVector::MakeVectorOfValue(getType(),
-                                        static_value_,
+                                        *static_value_,
                                         joined_tuple_ids.size()));
   } else {
-#ifdef QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_JOIN
-    const attribute_id operand_attr_id = operand_->getAttributeIdForValueAccessor();
-    if (operand_attr_id != -1) {
-      const JoinSide join_side = operand_->join_side();
-      DCHECK(join_side != kNone);
-      const bool using_left_relation = (join_side == kLeftSide);
-      ValueAccessor *operand_accessor = using_left_relation ? left_accessor
-                                                            : right_accessor;
-      return ColumnVectorPtr(
-          fast_operator_->applyToValueAccessorForJoin(operand_accessor,
-                                                      using_left_relation,
-                                                      operand_attr_id,
-                                                      joined_tuple_ids));
-    }
-#endif  // QUICKSTEP_ENABLE_VECTOR_COPY_ELISION_JOIN
-
     ColumnVectorPtr operand_result(
         operand_->getAllValuesForJoin(left_accessor,
                                       right_accessor,
@@ -148,23 +139,6 @@ ColumnVectorPtr ScalarUnaryExpression::getAllValuesForJoin(
                                       cv_cache));
     return ColumnVectorPtr(
         fast_operator_->applyToColumnVector(*operand_result));
-  }
-}
-
-void ScalarUnaryExpression::initHelper(bool own_children) {
-  if (operation_.canApplyToType(operand_->getType())) {
-    if (operand_->hasStaticValue()) {
-      static_value_ = operation_.applyToChecked(operand_->getStaticValue(),
-                                                operand_->getType());
-    } else {
-      fast_operator_.reset(operation_.makeUncheckedUnaryOperatorForType(operand_->getType()));
-    }
-  } else {
-    const Type &operand_type = operand_->getType();
-    if (!own_children) {
-      operand_.release();
-    }
-    throw OperationInapplicableToType(operation_.getName(), 1, operand_type.getName().c_str());
   }
 }
 
@@ -182,19 +156,17 @@ void ScalarUnaryExpression::getFieldStringItems(
                               container_child_field_names,
                               container_child_fields);
 
-  if (fast_operator_ == nullptr) {
+  if (static_value_ != nullptr) {
     inline_field_names->emplace_back("static_value");
-    if (static_value_.isNull()) {
+    if (static_value_->isNull()) {
       inline_field_values->emplace_back("NULL");
     } else {
-      inline_field_values->emplace_back(type_.printValueToString(static_value_));
+      inline_field_values->emplace_back(type_.printValueToString(*static_value_));
     }
   }
 
-  inline_field_names->emplace_back("operation");
-  inline_field_values->emplace_back(
-      kUnaryOperationNames[static_cast<std::underlying_type<UnaryOperationID>::type>(
-          operation_.getUnaryOperationID())]);
+  inline_field_names->emplace_back("signature");
+  inline_field_values->emplace_back(signature_->toString());
 
   non_container_child_field_names->emplace_back("operand");
   non_container_child_fields->emplace_back(operand_.get());

@@ -303,10 +303,10 @@ else()
   endif()
 
   # Treat warnings as errors, 'cause we hardcore.
-  CHECK_CXX_COMPILER_FLAG("-Werror" COMPILER_HAS_WERROR)
-  if (COMPILER_HAS_WERROR)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
-  endif()
+  # CHECK_CXX_COMPILER_FLAG("-Werror" COMPILER_HAS_WERROR)
+  # if (COMPILER_HAS_WERROR)
+  #   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+  # endif()
 
   # Clang reports such warning when using Protoc 3.0 beta.
   if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")

@@ -20,10 +20,12 @@
 #ifndef QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_SEARCHED_CASE_HPP_
 #define QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_SEARCHED_CASE_HPP_
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "expressions/scalar/Scalar.hpp"
@@ -105,6 +107,8 @@ class SearchedCase : public Scalar {
       const std::unordered_map<ExprId, const CatalogAttribute*> &substitution_map,
       const std::unordered_set<ExprId> &left_expr_ids = std::unordered_set<ExprId>(),
       const std::unordered_set<ExprId> &right_expr_ids = std::unordered_set<ExprId>()) const override;
+
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
 
   /**
    * @brief Creates an immutable SearchedCase.

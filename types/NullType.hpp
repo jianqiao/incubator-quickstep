@@ -50,7 +50,8 @@ class TypedValue;
  **/
 class NullType : public Type {
  public:
-  static const TypeID kStaticTypeID = kNullType;
+  static constexpr TypeID kStaticTypeID = kNullType;
+  static constexpr MemoryLayout kMemoryLayout = kParInlinePod;
 
   /**
    * @brief Get a reference to the nullable singleton instance of this Type.

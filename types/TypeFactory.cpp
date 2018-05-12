@@ -20,7 +20,10 @@
 #include "types/TypeFactory.hpp"
 
 #include <cstddef>
+#include <exception>
+#include <regex>
 #include <string>
+#include <unordered_map>
 
 #include "types/CharType.hpp"
 #include "types/DateType.hpp"
@@ -91,21 +94,22 @@ bool TypeFactory::ProtoIsValid(const serialization::Type &proto) {
   }
 
   // Check that the type_id is valid, and extensions if any.
-  switch (proto.type_id()) {
-    case serialization::Type::INT:
-    case serialization::Type::LONG:
-    case serialization::Type::FLOAT:
-    case serialization::Type::DOUBLE:
-    case serialization::Type::DATE:
-    case serialization::Type::DATETIME:
-    case serialization::Type::DATETIME_INTERVAL:
-    case serialization::Type::YEAR_MONTH_INTERVAL:
+  const TypeID type_id = ReconstructTypeIDFromProto(proto.type_id());
+  switch (type_id) {
+    case kInt:
+    case kLong:
+    case kFloat:
+    case kDouble:
+    case kDate:
+    case kDatetime:
+    case kDatetimeInterval:
+    case kYearMonthInterval:
       return true;
-    case serialization::Type::CHAR:
+    case kChar:
       return proto.HasExtension(serialization::CharType::length);
-    case serialization::Type::VAR_CHAR:
+    case kVarChar:
       return proto.HasExtension(serialization::VarCharType::length);
-    case serialization::Type::NULL_TYPE:
+    case kNullType:
       return proto.nullable();
     default:
       return false;
@@ -117,28 +121,29 @@ const Type& TypeFactory::ReconstructFromProto(const serialization::Type &proto) 
       << "Attempted to create Type from an invalid proto description:\n"
       << proto.DebugString();
 
-  switch (proto.type_id()) {
-    case serialization::Type::INT:
+  const TypeID type_id = ReconstructTypeIDFromProto(proto.type_id());
+  switch (type_id) {
+    case kInt:
       return IntType::Instance(proto.nullable());
-    case serialization::Type::LONG:
+    case kLong:
       return LongType::Instance(proto.nullable());
-    case serialization::Type::FLOAT:
+    case kFloat:
       return FloatType::Instance(proto.nullable());
-    case serialization::Type::DOUBLE:
+    case kDouble:
       return DoubleType::Instance(proto.nullable());
-    case serialization::Type::DATE:
+    case kDate:
       return DateType::Instance(proto.nullable());
-    case serialization::Type::DATETIME:
+    case kDatetime:
       return DatetimeType::Instance(proto.nullable());
-    case serialization::Type::DATETIME_INTERVAL:
+    case kDatetimeInterval:
       return DatetimeIntervalType::Instance(proto.nullable());
-    case serialization::Type::YEAR_MONTH_INTERVAL:
+    case kYearMonthInterval:
       return YearMonthIntervalType::Instance(proto.nullable());
-    case serialization::Type::CHAR:
+    case kChar:
       return CharType::InstanceFromProto(proto);
-    case serialization::Type::VAR_CHAR:
+    case kVarChar:
       return VarCharType::InstanceFromProto(proto);
-    case serialization::Type::NULL_TYPE:
+    case kNullType:
       DCHECK(proto.nullable());
       return NullType::InstanceNullable();
     default:
@@ -177,6 +182,58 @@ const Type* TypeFactory::GetUnifyingType(const Type &first, const Type &second) 
   }
 
   return unifier;
+}
+
+const Type* TypeFactory::ParseTypeFromString(const std::string &type_name) {
+  // TODO(Jianqiao): We will use a systematical approach to parse types which is
+  // similar to operation resolution in subsequent type refactoring commits.
+  static const std::regex type_regex("([a-zA-Z]+)(\\(([0-9]+)\\))?( NULL)?");
+  static const std::unordered_map<std::string, TypeID> type_index =
+      { { "Int", kInt }, { "Long", kLong },
+        { "Float", kFloat }, { "Double", kDouble },
+        { "Char", kChar }, { "VarChar", kVarChar },
+        { "Date", kDate }, { "Datetime", kDatetime },
+        { "DatetimeInterval", kDatetimeInterval },
+        { "YearMonthInterval", kYearMonthInterval } };
+
+  std::smatch match;
+  if (!std::regex_match(type_name, match, type_regex)) {
+    return nullptr;
+  }
+
+  const auto index_it = type_index.find(match.str(1));
+  if (index_it == type_index.end()) {
+    return nullptr;
+  }
+
+  const TypeID type_id = index_it->second;
+  const bool nullable = !match.str(4).empty();
+
+  switch (type_id) {
+    case kInt:  // Fall through
+    case kLong:
+    case kFloat:
+    case kDouble:
+    case kDate:
+    case kDatetime:
+    case kDatetimeInterval:
+    case kYearMonthInterval: {
+      return &GetType(type_id, nullable);
+    }
+    case kChar:  // Fall through
+    case kVarChar: {
+      std::size_t length;
+      try {
+        length = std::stoull(match.str(3));
+      } catch (const std::exception &e) {
+        return nullptr;
+      }
+      return &GetType(type_id, length, nullable);
+    }
+    default:
+      break;
+  }
+  return nullptr;
 }
 
 }  // namespace quickstep

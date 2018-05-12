@@ -83,6 +83,8 @@ class Cast : public Scalar {
 
   bool equals(const ScalarPtr &other) const override;
 
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
+
   /**
    * @brief Creates a Cast expression that converts \p operand to \p target_type.
    *

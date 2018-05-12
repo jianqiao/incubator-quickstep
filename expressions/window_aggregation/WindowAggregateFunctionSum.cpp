@@ -27,8 +27,6 @@
 #include "types/TypeFactory.hpp"
 #include "types/TypeID.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationFactory.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 
 #include "glog/logging.h"
 
@@ -42,8 +40,12 @@ bool WindowAggregateFunctionSum::canApplyToTypes(
   }
 
   // Argument must be addable.
-  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
-             .canApplyToTypes(*argument_types.front(), *argument_types.front());
+////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// TODO-FIX(Day-Nov19) //////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//  return BinaryOperationFactory::GetBinaryOperation(BinaryOperationID::kAdd)
+//             .canApplyToTypes(*argument_types.front(), *argument_types.front());
+  return false;
 }
 
 const Type* WindowAggregateFunctionSum::resultTypeForArgumentTypes(

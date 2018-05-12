@@ -19,29 +19,26 @@
 
 #include "types/operations/unary_operations/UnaryOperation.hpp"
 
-#include "types/operations/Operation.pb.h"
-#include "types/operations/unary_operations/UnaryOperationID.hpp"
-#include "utility/Macros.hpp"
+#include <cstddef>
+#include <string>
+
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 
 namespace quickstep {
 
-serialization::UnaryOperation UnaryOperation::getProto() const {
-  serialization::UnaryOperation proto;
-  switch (operation_id_) {
-    case UnaryOperationID::kNegate:
-      proto.set_operation_id(serialization::UnaryOperation::NEGATE);
-      break;
-    case UnaryOperationID::kCast:
-      FATAL_ERROR("Must use the overridden NumericCastOperation::getProto");
-    case UnaryOperationID::kDateExtract:
-      FATAL_ERROR("Must use the overridden DateExtractOperation::getProto");
-    case UnaryOperationID::kSubstring:
-      FATAL_ERROR("Must use the overridden SubstringOperation::getProto");
-    default:
-      FATAL_ERROR("Unrecognized UnaryOperationID in UnaryOperation::getProto");
+std::string UnaryOperation::formatExpression(const OperationSignaturePtr &signature,
+                                             const std::string &argument,
+                                             const std::size_t argument_precedence) const {
+  const std::size_t precedence = getOperatorPrecedence();
+  if (precedence != kOperatorPrecedenceFunctionCall) {
+    if (precedence <= argument_precedence) {
+      return getShortName() + "(" + argument + ")";
+    } else {
+      return getShortName() + argument;
+    }
   }
-
-  return proto;
+  return getName() + "(" + argument + ")";
 }
 
 }  // namespace quickstep

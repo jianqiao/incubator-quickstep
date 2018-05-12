@@ -33,8 +33,9 @@
 #include "query_optimizer/expressions/ExprId.hpp"
 #include "query_optimizer/expressions/Expression.hpp"
 #include "query_optimizer/expressions/PatternMatcher.hpp"
+#include "types/operations/OperationSignature.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 #include "types/operations/binary_operations/BinaryOperation.hpp"
-#include "types/operations/binary_operations/BinaryOperationID.hpp"
 #include "utility/HashPair.hpp"
 
 #include "glog/logging.h"
@@ -46,37 +47,33 @@ class Type;
 namespace optimizer {
 namespace expressions {
 
-BinaryExpression::BinaryExpression(const BinaryOperation &operation,
+BinaryExpression::BinaryExpression(const OperationSignaturePtr &signature,
+                                   const BinaryOperation &operation,
                                    const ScalarPtr &left,
                                    const ScalarPtr &right)
-    : operation_(operation), left_(left), right_(right) {
-  DCHECK(operation_.canApplyToTypes(left_->getValueType(),
-                                    right_->getValueType()))
-      << toString();
+    : signature_(signature),
+      operation_(operation),
+      left_(left),
+      right_(right),
+      result_type_(operation_.resultTypeForSignature(signature_)) {
+  DCHECK(operation_.canApplyToSignature(signature_)) << toString();
   addChild(left_);
   addChild(right_);
 }
 
 std::string BinaryExpression::getName() const {
-  switch (operation_.getBinaryOperationID()) {
-    case BinaryOperationID::kAdd:
-      return "Add";
-    case BinaryOperationID::kSubtract:
-      return "Subtract";
-    case BinaryOperationID::kMultiply:
-      return "Multiply";
-    case BinaryOperationID::kDivide:
-      return "Divide";
-    case BinaryOperationID::kModulo:
-      return "Modulo";
-    default:
-      LOG(FATAL) << "Unknown binary operation";
-  }
+  return operation_.getName();
 }
 
-const Type &BinaryExpression::getValueType() const {
-  return *operation_.resultTypeForArgumentTypes(left_->getValueType(),
-                                                right_->getValueType());
+std::pair<std::string, std::size_t> BinaryExpression::generateNameWithPrecedence() const {
+  const auto left_info = left_->generateNameWithPrecedence();
+  const auto right_info = right_->generateNameWithPrecedence();
+  const std::string name = operation_.formatExpression(signature_,
+                                                       left_info.first,
+                                                       left_info.second,
+                                                       right_info.first,
+                                                       right_info.second);
+  return std::make_pair(name, operation_.getOperatorPrecedence());
 }
 
 ExpressionPtr BinaryExpression::copyWithNewChildren(
@@ -85,6 +82,7 @@ ExpressionPtr BinaryExpression::copyWithNewChildren(
   DCHECK(SomeScalar::Matches(new_children[0]));
   DCHECK(SomeScalar::Matches(new_children[1]));
   return BinaryExpression::Create(
+      signature_,
       operation_,
       std::static_pointer_cast<const Scalar>(new_children[0]),
       std::static_pointer_cast<const Scalar>(new_children[1]));
@@ -106,7 +104,7 @@ std::vector<AttributeReferencePtr> BinaryExpression::getReferencedAttributes() c
     const std::unordered_set<ExprId> &left_expr_ids,
     const std::unordered_set<ExprId> &right_expr_ids) const {
   return new ::quickstep::ScalarBinaryExpression(
-      operation_,
+      signature_, operation_,
       left_->concretize(substitution_map, left_expr_ids, right_expr_ids),
       right_->concretize(substitution_map, left_expr_ids, right_expr_ids));
 }
@@ -119,19 +117,16 @@ std::size_t BinaryExpression::computeHash() const {
     std::swap(left_hash, right_hash);
   }
 
-  return CombineHashes(
-      CombineHashes(static_cast<std::size_t>(ExpressionType::kBinaryExpression),
-                    static_cast<std::size_t>(operation_.getBinaryOperationID())),
-      CombineHashes(left_hash, right_hash));
+  return CombineHashes(signature_->getHash(),
+                       CombineHashes(left_hash, right_hash));
 }
 
 bool BinaryExpression::equals(const ScalarPtr &other) const {
   BinaryExpressionPtr expr;
   if (SomeBinaryExpression::MatchesWithConditionalCast(other, &expr) &&
-      &operation_ == &expr->operation_) {
+      *signature_ == *expr->signature_) {
     ScalarPtr left = left_;
     ScalarPtr right = right_;
-
     if (operation_.isCommutative()) {
       const bool self_order = (left_->hash() < right_->hash());
       const bool other_order = (expr->left_->hash() < expr->right_->hash());
@@ -139,7 +134,6 @@ bool BinaryExpression::equals(const ScalarPtr &other) const {
         std::swap(left, right);
       }
     }
-
     return left->equals(expr->left_) && right->equals(expr->right_);
   }
   return false;

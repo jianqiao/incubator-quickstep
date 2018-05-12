@@ -20,9 +20,11 @@
 #ifndef QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_NAMED_EXPRESSION_HPP_
 #define QUICKSTEP_QUERY_OPTIMIZER_EXPRESSIONS_NAMED_EXPRESSION_HPP_
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "query_optimizer/OptimizerTree.hpp"
 #include "query_optimizer/expressions/ExprId.hpp"
@@ -68,6 +70,8 @@ class NamedExpression : public Scalar {
    * @return The relation name. May be empty.
    */
   inline const std::string& relation_name() const { return relation_name_; }
+
+  std::pair<std::string, std::size_t> generateNameWithPrecedence() const override;
 
  protected:
   /**

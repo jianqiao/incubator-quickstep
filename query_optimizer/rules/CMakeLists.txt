@@ -96,8 +96,10 @@ target_link_libraries(quickstep_queryoptimizer_rules_CollapseSelection
                       quickstep_queryoptimizer_expressions_NamedExpression
                       quickstep_queryoptimizer_expressions_PatternMatcher
                       quickstep_queryoptimizer_expressions_Predicate
+                      quickstep_queryoptimizer_physical_Aggregate
                       quickstep_queryoptimizer_physical_PatternMatcher
                       quickstep_queryoptimizer_physical_Physical
+                      quickstep_queryoptimizer_physical_PhysicalType
                       quickstep_queryoptimizer_physical_Selection
                       quickstep_queryoptimizer_rules_BottomUpRule
                       quickstep_queryoptimizer_rules_RuleHelper
@@ -247,8 +249,6 @@ target_link_libraries(quickstep_queryoptimizer_rules_Partition
                       quickstep_queryoptimizer_physical_TopLevelPlan
                       quickstep_queryoptimizer_rules_BottomUpRule
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Cast
                       quickstep_utility_EqualsAnyConstant
                       quickstep_utility_Macros)
@@ -369,8 +369,6 @@ target_link_libraries(quickstep_queryoptimizer_rules_ReuseAggregateExpressions
                       quickstep_queryoptimizer_physical_TopLevelPlan
                       quickstep_queryoptimizer_rules_BottomUpRule
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_HashError
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_queryoptimizer_rules_Rule

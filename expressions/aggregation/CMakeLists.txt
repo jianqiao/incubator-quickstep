@@ -83,8 +83,6 @@ target_link_libraries(quickstep_expressions_aggregation_AggregateFunctionAvg
                       quickstep_types_TypeFactory
                       quickstep_types_TypeID
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_expressions_aggregation_AggregateFunctionCount
                       glog
@@ -134,8 +132,6 @@ target_link_libraries(quickstep_expressions_aggregation_AggregateFunctionSum
                       quickstep_types_TypeFactory
                       quickstep_types_TypeID
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_expressions_aggregation_AggregateFunction_proto
                       ${PROTOBUF_LIBRARY})
@@ -171,8 +167,6 @@ target_link_libraries(quickstep_expressions_aggregation_AggregationHandleAvg
                       quickstep_types_TypeID
                       quickstep_types_TypedValue
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_expressions_aggregation_AggregationHandleCount
                       glog
@@ -229,8 +223,6 @@ target_link_libraries(quickstep_expressions_aggregation_AggregationHandleSum
                       quickstep_types_TypeID
                       quickstep_types_TypedValue
                       quickstep_types_operations_binaryoperations_BinaryOperation
-                      quickstep_types_operations_binaryoperations_BinaryOperationFactory
-                      quickstep_types_operations_binaryoperations_BinaryOperationID
                       quickstep_utility_Macros)
 
 # Submodule all-in-one library:

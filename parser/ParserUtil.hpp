@@ -20,8 +20,32 @@
 #ifndef QUICKSTEP_PARSER_PARSER_UTIL_HPP_
 #define QUICKSTEP_PARSER_PARSER_UTIL_HPP_
 
+#include <vector>
+
+#include "utility/PtrList.hpp"
+
 namespace quickstep {
 class ParseStatement;
+
+/**
+ * @brief Create a PtrList that takes ownership of a variadic number of
+ *        homogeneous objects.
+ *
+ * @param front The first object.
+ * @param rest The remaining objects.
+ *
+ * @return A PtrList of the input objects.
+ */
+template <typename T, typename ...Ts>
+PtrList<T>* CreatePtrList(T *front, Ts *...rest) {
+  PtrList<T> *list = new PtrList<T>();
+  list->push_back(front);
+  for (T *item : std::vector<T*>{rest...}) {
+    list->push_back(item);
+  }
+  return list;
+}
+
 }
 
 struct YYLTYPE;

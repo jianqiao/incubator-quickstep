@@ -100,6 +100,7 @@ target_link_libraries(quickstep_queryoptimizer_resolver_Resolver
                       quickstep_queryoptimizer_logical_CopyTo
                       quickstep_queryoptimizer_logical_CreateIndex
                       quickstep_queryoptimizer_logical_CreateTable
+                      quickstep_queryoptimizer_logical_Deduplicate
                       quickstep_queryoptimizer_logical_DeleteTuples
                       quickstep_queryoptimizer_logical_DropTable
                       quickstep_queryoptimizer_logical_Filter
@@ -126,12 +127,11 @@ target_link_libraries(quickstep_queryoptimizer_resolver_Resolver
                       quickstep_types_Type
                       quickstep_types_TypeFactory
                       quickstep_types_TypedValue
-                      quickstep_types_operations_binaryoperations_BinaryOperation
+                      quickstep_types_operations_Operation
+                      quickstep_types_operations_OperationFactory
                       quickstep_types_operations_comparisons_Comparison
                       quickstep_types_operations_comparisons_ComparisonFactory
                       quickstep_types_operations_comparisons_ComparisonID
-                      quickstep_types_operations_unaryoperations_DateExtractOperation
-                      quickstep_types_operations_unaryoperations_SubstringOperation
                       quickstep_types_operations_unaryoperations_UnaryOperation
                       quickstep_utility_BulkIoConfiguration
                       quickstep_utility_Macros

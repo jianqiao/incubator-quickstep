@@ -711,6 +711,24 @@ class TypedValue {
   }
 
   /**
+   * @brief Check if two TypedValues are equal.
+   *
+   * @param other Another TypedValue to check for equality with this one.
+   * @return Whether this TypedValue is equal to other.
+   **/
+  inline bool equals(const TypedValue &other) const {
+    if (getTypeID() != other.getTypeID()) {
+      return false;
+    }
+    const bool lhs_null = isNull();
+    const bool rhs_null = other.isNull();
+    if (lhs_null || rhs_null) {
+      return lhs_null == rhs_null;
+    }
+    return fastEqualCheck(other);
+  }
+
+  /**
    * @brief Generate a serialized Protocol Buffer representation
    *        of this TypedValue.
    *
