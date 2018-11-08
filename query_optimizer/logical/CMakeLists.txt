@@ -22,6 +22,7 @@ add_library(quickstep_queryoptimizer_logical_CopyFrom CopyFrom.cpp CopyFrom.hpp)
 add_library(quickstep_queryoptimizer_logical_CopyTo CopyTo.cpp CopyTo.hpp)
 add_library(quickstep_queryoptimizer_logical_CreateIndex CreateIndex.cpp CreateIndex.hpp)
 add_library(quickstep_queryoptimizer_logical_CreateTable CreateTable.cpp CreateTable.hpp)
+add_library(quickstep_queryoptimizer_logical_Deduplicate Deduplicate.cpp Deduplicate.hpp)
 add_library(quickstep_queryoptimizer_logical_DeleteTuples DeleteTuples.cpp DeleteTuples.hpp)
 add_library(quickstep_queryoptimizer_logical_DropTable DropTable.cpp DropTable.hpp)
 add_library(quickstep_queryoptimizer_logical_Filter Filter.cpp Filter.hpp)
@@ -104,6 +105,17 @@ target_link_libraries(quickstep_queryoptimizer_logical_CreateTable
                       quickstep_queryoptimizer_logical_Logical
                       quickstep_queryoptimizer_logical_LogicalType
                       quickstep_storage_StorageBlockLayout_proto
+                      quickstep_utility_Cast
+                      quickstep_utility_Macros)
+target_link_libraries(quickstep_queryoptimizer_logical_Deduplicate
+                      glog
+                      quickstep_queryoptimizer_OptimizerTree
+                      quickstep_queryoptimizer_expressions_AttributeReference
+                      quickstep_queryoptimizer_expressions_Expression
+                      quickstep_queryoptimizer_expressions_ExpressionUtil
+                      quickstep_queryoptimizer_expressions_PatternMatcher
+                      quickstep_queryoptimizer_logical_Logical
+                      quickstep_queryoptimizer_logical_LogicalType
                       quickstep_utility_Cast
                       quickstep_utility_Macros)
 target_link_libraries(quickstep_queryoptimizer_logical_DeleteTuples
@@ -304,6 +316,7 @@ target_link_libraries(quickstep_queryoptimizer_logical
                       quickstep_queryoptimizer_logical_CopyTo
                       quickstep_queryoptimizer_logical_CreateIndex
                       quickstep_queryoptimizer_logical_CreateTable
+                      quickstep_queryoptimizer_logical_Deduplicate
                       quickstep_queryoptimizer_logical_DeleteTuples
                       quickstep_queryoptimizer_logical_DropTable
                       quickstep_queryoptimizer_logical_Filter

@@ -51,6 +51,7 @@ class ParseSelect : public ParseTreeNode {
    *
    * @param line_number Line number of the first token of this node in the SQL statement.
    * @param column_number Column number of the first token of this node in the SQL statement.
+   * @param is_distinct Whether the selection clause begins with the DISTINCT keyword.
    * @param selection The parsed selection, which becomes owned by this
    *        ParseStatementSelect.
    * @param from_list The parsed list of table references in the FROM clause,
@@ -65,6 +66,7 @@ class ParseSelect : public ParseTreeNode {
    **/
   ParseSelect(const int line_number,
               const int column_number,
+              const bool has_distinct,
               ParseSelectionClause *selection,
               PtrList<ParseTableReference> *from_list,
               ParsePredicate *where_predicate,
@@ -74,6 +76,7 @@ class ParseSelect : public ParseTreeNode {
               ParseLimit *limit,
               PtrList<ParseWindow> *window_list)
       : ParseTreeNode(line_number, column_number),
+        has_distinct_(has_distinct),
         selection_(selection),
         from_list_(from_list),
         where_predicate_(where_predicate),
@@ -89,6 +92,16 @@ class ParseSelect : public ParseTreeNode {
 
   std::string getName() const override {
     return "Select";
+  }
+
+  /**
+   * @brief Check whether the selection clause begins with the DISTINCT keyword.
+   *
+   * @return True if the selection clause begins with the DISTINCT keyword,
+   *         false otherwise.
+   */
+  bool has_distinct() const {
+    return has_distinct_;
   }
 
   /**
@@ -218,6 +231,7 @@ class ParseSelect : public ParseTreeNode {
   }
 
  private:
+  const bool has_distinct_;
   std::unique_ptr<ParseSelectionClause> selection_;
   std::unique_ptr<PtrList<ParseTableReference> > from_list_;
   std::unique_ptr<ParsePredicate> where_predicate_;

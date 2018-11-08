@@ -30,6 +30,7 @@
 #include "query_optimizer/logical/CopyTo.hpp"
 #include "query_optimizer/logical/CreateIndex.hpp"
 #include "query_optimizer/logical/CreateTable.hpp"
+#include "query_optimizer/logical/Deduplicate.hpp"
 #include "query_optimizer/logical/DeleteTuples.hpp"
 #include "query_optimizer/logical/DropTable.hpp"
 #include "query_optimizer/logical/InsertSelection.hpp"
@@ -137,6 +138,18 @@ bool OneToOne::generatePlan(const L::LogicalPtr &logical_input,
                                                 create_table->attributes(),
                                                 create_table->block_properties(),
                                                 create_table->partition_scheme_header_proto());
+      return true;
+    }
+    case L::LogicalType::kDeduplicate: {
+      const L::DeduplicatePtr deduplicate =
+          std::static_pointer_cast<const L::Deduplicate>(logical_input);
+      const P::PhysicalPtr input =
+          physical_mapper_->createOrGetPhysicalFromLogical(deduplicate->input());
+      *physical_output = P::Aggregate::Create(
+          input,
+          E::ToNamedExpressions(input->getOutputAttributes()),
+          {} /* aggregate_expression */,
+          nullptr /* filter_predicate */);
       return true;
     }
     case L::LogicalType::kDeleteTuples: {

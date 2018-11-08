@@ -37,6 +37,7 @@ enum class LogicalType {
   kCopyTo,
   kCreateIndex,
   kCreateTable,
+  kDeduplicate,
   kDeleteTuples,
   kDropTable,
   kFilter,

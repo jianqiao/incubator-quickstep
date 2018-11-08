@@ -372,6 +372,7 @@ void NotSupported(const YYLTYPE *location, yyscan_t yyscanner, const std::string
 %type <boolean_value_>
   boolean_value
   frame_mode
+  opt_distinct
   opt_all_distinct
 
 %type <literal_value_>
@@ -1260,6 +1261,17 @@ set_operation_union:
     $$ = $1;
   }
 
+opt_all_distinct:
+  {
+    $$ = true;  // Distinct
+  }
+  | TOKEN_ALL {
+    $$ = false;  // All
+  }
+  | TOKEN_DISTINCT {
+    $$ = true;  // Distinct
+  };
+
 set_operation_intersect:
   set_operation_intersect TOKEN_INTERSECT select_query {
     $$ = new quickstep::ParseSetOperation(@1.first_line, @1.first_column, quickstep::ParseSetOperation::kIntersect);
@@ -1275,20 +1287,17 @@ set_operation_intersect:
   }
 
 select_query:
-  TOKEN_SELECT opt_all_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
+  TOKEN_SELECT opt_distinct selection from_clause opt_where_clause opt_group_by_clause opt_having_clause
       opt_order_by_clause opt_limit_clause opt_window_clause {
-    $$ = new quickstep::ParseSelect(@1.first_line, @1.first_column, $3, $4, $5, $6, $7, $8, $9, $10);
+    $$ = new quickstep::ParseSelect(@1.first_line, @1.first_column, $2, $3, $4, $5, $6, $7, $8, $9, $10);
   }
 
-opt_all_distinct:
+opt_distinct:
   {
-    $$ = true;  // Distinct
-  }
-  | TOKEN_ALL {
-    $$ = false;  // All
+    $$ = false;
   }
   | TOKEN_DISTINCT {
-    $$ = true;  // Distinct
+    $$ = true;
   };
 
 selection:

@@ -96,6 +96,7 @@
 #include "query_optimizer/logical/CopyTo.hpp"
 #include "query_optimizer/logical/CreateIndex.hpp"
 #include "query_optimizer/logical/CreateTable.hpp"
+#include "query_optimizer/logical/Deduplicate.hpp"
 #include "query_optimizer/logical/DeleteTuples.hpp"
 #include "query_optimizer/logical/DropTable.hpp"
 #include "query_optimizer/logical/Filter.hpp"
@@ -1510,6 +1511,11 @@ L::LogicalPtr Resolver::resolveSelect(
   }
 
   logical_plan = L::Project::Create(logical_plan, select_list_expressions);
+
+  if (select_query.has_distinct()) {
+    logical_plan = L::Deduplicate::Create(logical_plan,
+                                          logical_plan->getOutputAttributes());
+  }
 
   return logical_plan;
 }

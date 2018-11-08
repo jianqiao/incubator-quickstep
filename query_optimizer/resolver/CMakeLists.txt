@@ -100,6 +100,7 @@ target_link_libraries(quickstep_queryoptimizer_resolver_Resolver
                       quickstep_queryoptimizer_logical_CopyTo
                       quickstep_queryoptimizer_logical_CreateIndex
                       quickstep_queryoptimizer_logical_CreateTable
+                      quickstep_queryoptimizer_logical_Deduplicate
                       quickstep_queryoptimizer_logical_DeleteTuples
                       quickstep_queryoptimizer_logical_DropTable
                       quickstep_queryoptimizer_logical_Filter
