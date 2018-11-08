@@ -64,8 +64,7 @@ using NegateFunctors =
         ::apply<meta::TraitWrapper<NegateFunctor>::type>;
 
 using SgnFunctors =
-//    meta::TypeList<IntType, LongType, FloatType, DoubleType>
-    meta::TypeList<LongType, DoubleType>
+    meta::TypeList<IntType, LongType, FloatType, DoubleType>
         ::apply<meta::TraitWrapper<SgnFunctor>::type>;
 
 using ArithmeticUnaryFunctors =
