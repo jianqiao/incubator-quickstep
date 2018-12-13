@@ -19,6 +19,9 @@
 add_library(quickstep_types_operations_unaryoperations_ArithmeticUnaryOperations
             ../../../empty_src.cpp
             ArithmeticUnaryOperations.hpp)
+add_library(quickstep_types_operations_unaryoperations_AsciiStringUnaryOperations
+            ../../../empty_src.cpp
+            AsciiStringUnaryOperations.hpp)
 add_library(quickstep_types_operations_unaryoperations_CastOperation CastOperation.cpp CastOperation.hpp)
 add_library(quickstep_types_operations_unaryoperations_CxxMathUnaryOperations
             ../../../empty_src.cpp
@@ -109,6 +112,7 @@ target_link_libraries(quickstep_types_operations_unaryoperations_UnaryOperationC
 add_library(quickstep_types_operations_unaryoperations ../../../empty_src.cpp)
 target_link_libraries(quickstep_types_operations_unaryoperations
                       quickstep_types_operations_unaryoperations_ArithmeticUnaryOperations
+                      quickstep_types_operations_unaryoperations_AsciiStringUnaryOperations
                       quickstep_types_operations_unaryoperations_CastOperation
                       quickstep_types_operations_unaryoperations_CxxMathUnaryOperations
                       quickstep_types_operations_unaryoperations_UnaryFunctor

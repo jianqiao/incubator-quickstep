@@ -50,10 +50,12 @@ target_link_libraries(quickstep_types_operations_OperationFactory
                       quickstep_types_operations_OperationSignatureCoercionPrecedence
                       quickstep_types_operations_OperationSignatureLite
                       quickstep_types_operations_binaryoperations_ArithmeticBinaryOperations
+                      quickstep_types_operations_binaryoperations_AsciiStringBinaryOperations
                       quickstep_types_operations_binaryoperations_BinaryOperation
                       quickstep_types_operations_binaryoperations_BinaryOperationCodeGen
                       quickstep_types_operations_binaryoperations_CxxMathBinaryOperations
                       quickstep_types_operations_unaryoperations_ArithmeticUnaryOperations
+                      quickstep_types_operations_unaryoperations_AsciiStringUnaryOperations
                       quickstep_types_operations_unaryoperations_CastOperation
                       quickstep_types_operations_unaryoperations_CxxMathUnaryOperations
                       quickstep_types_operations_unaryoperations_UnaryOperation

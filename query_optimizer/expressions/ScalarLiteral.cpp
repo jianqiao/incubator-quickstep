@@ -47,8 +47,11 @@ const Type& ScalarLiteral::getValueType() const {
 }
 
 std::pair<std::string, std::size_t> ScalarLiteral::generateNameWithPrecedence() const {
-  const std::string name =
-      value_.isNull() ? "NULL" : value_type_.printValueToString(value_);
+  std::string name = value_.isNull() ? "NULL" : value_type_.printValueToString(value_);
+  if (value_type_.getSuperTypeID() == Type::kNumeric &&
+      name.length() > 0 && name[0] == '-') {
+    return std::make_pair(name, kOperatorPrecedenceUnaryMinus);
+  }
   return std::make_pair(name, kOperatorPrecedenceAtomicEntity);
 }
 

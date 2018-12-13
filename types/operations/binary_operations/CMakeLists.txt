@@ -22,6 +22,9 @@ add_library(quickstep_types_operations_binaryoperations_ArithmeticBinaryFunctorO
 add_library(quickstep_types_operations_binaryoperations_ArithmeticBinaryOperations
             ../../../empty_src.cpp
             ArithmeticBinaryOperations.hpp)
+add_library(quickstep_types_operations_binaryoperations_AsciiStringBinaryOperations
+            ../../../empty_src.cpp
+            AsciiStringBinaryOperations.hpp)
 add_library(quickstep_types_operations_binaryoperations_BinaryFunctor ../../../empty_src.cpp BinaryFunctor.hpp)
 add_library(quickstep_types_operations_binaryoperations_BinaryOperation
             BinaryOperation.cpp
@@ -91,6 +94,7 @@ add_library(quickstep_types_operations_binaryoperations ../../../empty_src.cpp)
 target_link_libraries(quickstep_types_operations_binaryoperations
                       quickstep_types_operations_binaryoperations_ArithmeticBinaryFunctorOverloads
                       quickstep_types_operations_binaryoperations_ArithmeticBinaryOperations
+                      quickstep_types_operations_binaryoperations_AsciiStringBinaryOperations
                       quickstep_types_operations_binaryoperations_BinaryFunctor
                       quickstep_types_operations_binaryoperations_BinaryOperation
                       quickstep_types_operations_binaryoperations_BinaryOperationCodeGen

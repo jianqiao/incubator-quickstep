@@ -35,9 +35,19 @@ std::string BinaryOperation::formatExpression(const OperationSignaturePtr &signa
   const std::size_t precedence = getOperatorPrecedence();
   if (precedence != kOperatorPrecedenceFunctionCall) {
     std::string expression;
-    expression.append(precedence <= left_precedence ? "(" + left + ")" : left);
+    if (precedence <= left_precedence || left_precedence == kOperatorPrecedenceCast) {
+      expression.append("(" + left + ")");
+    } else {
+      expression.append(left);
+    }
     expression.append(getShortName());
-    expression.append(precedence <= right_precedence ? "(" + right + ")" : right);
+    if (precedence <= right_precedence ||
+        right_precedence == kOperatorPrecedenceCast ||
+        right_precedence == kOperatorPrecedenceUnaryMinus) {
+      expression.append("(" + right + ")");
+    } else {
+      expression.append(right);
+    }
     return expression;
   }
   return getName() + "(" + left + "," + right + ")";
