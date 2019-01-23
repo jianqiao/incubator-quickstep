@@ -58,6 +58,8 @@ OperationFactory::OperationFactory() {
   // Register functor lists.
   registerFunctorsCodeGen<ArithmeticBinaryFunctors>();
   registerFunctorsCodeGen<ArithmeticUnaryFunctors>();
+  registerFunctorsCodeGen<AsciiStringUnaryFunctors>();
+  registerFunctorsCodeGen<CxxMathBinaryFunctors>();
   registerFunctorsCodeGen<CxxMathUnaryFunctors>();
 }
 

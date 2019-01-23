@@ -27,6 +27,7 @@
 #include "types/FloatType.hpp"
 #include "types/IntType.hpp"
 #include "types/LongType.hpp"
+#include "types/operations/OperatorPrecedence.hpp"
 #include "types/operations/binary_operations/BinaryFunctor.hpp"
 #include "utility/meta/StringConstant.hpp"
 #include "utility/meta/TypeList.hpp"
@@ -37,16 +38,44 @@ namespace quickstep {
  *  @{
  */
 
+template <typename LeftType, typename RightType, typename ResultType,
+          typename ResultType::cpptype f(typename LeftType::cpptype,
+                                         typename RightType::cpptype),
+          typename FunctionName>
+struct CxxMathBinaryFunctorTrait {
+  struct type : public BinaryFunctor<FunctionName,
+                                     FunctionName,
+                                     kOperatorPrecedenceFunctionCall,
+                                     LeftType,
+                                     RightType,
+                                     ResultType> {
+    inline void operator()(const typename LeftType::cpptype *left,
+                           const typename RightType::cpptype *right,
+                           typename ResultType::cpptype *result) const {
+      *result = f(*left, *right);
+    }
+  };
+};
+
+template <typename LeftType, typename RightType, typename ResultType,
+          typename ResultType::cpptype f(typename LeftType::cpptype,
+                                         typename RightType::cpptype),
+          typename FunctionName>
+using CxxMathBinaryFunctor =
+    typename CxxMathBinaryFunctorTrait<
+        LeftType, RightType, ResultType, f, FunctionName>::type;
 
 // ----------------------------------------------------------------------------
 // List of C standard library math functions.
 
-
+using PowFunctors = meta::TypeList<
+    CxxMathBinaryFunctor<FloatType, FloatType, FloatType, std::pow, STR_CONST8("pow")>,
+    CxxMathBinaryFunctor<DoubleType, DoubleType, DoubleType, std::pow, STR_CONST8("pow")>>;
 
 // ----------------------------------------------------------------------------
 // All-in-one packing.
 
-
+using CxxMathBinaryFunctors = meta::TypeList<PowFunctors>;
 
 /** @} */
 

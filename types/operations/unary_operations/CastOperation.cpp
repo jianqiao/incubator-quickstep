@@ -44,6 +44,7 @@
 #include "types/operations/unary_operations/UnaryFunctor.hpp"
 #include "types/operations/unary_operations/UnaryOperationCodeGen.hpp"
 #include "utility/EqualsAnyConstant.hpp"
+#include "utility/StringUtil.hpp"
 #include "utility/meta/Common.hpp"
 #include "utility/meta/MultipleDispatcher.hpp"
 #include "utility/meta/StringConstant.hpp"
@@ -64,6 +65,7 @@ struct CastNumericToNumericFunctor : public UnaryFunctor<STR_CONST8("Cast"),
                                                          TargetType> {
   using SourceCppType = typename SourceType::cpptype;
   using TargetCppType = typename TargetType::cpptype;
+
   inline void operator()(const SourceCppType *argument,
                          TargetCppType *result) const {
     *result = static_cast<TargetCppType>(*argument);
@@ -184,7 +186,7 @@ std::string CastOperation::formatExpression(const OperationSignaturePtr &signatu
   std::string target_type_name = GetTargetTypeNameFromSignature(signature);
   const Type *target_type = TypeFactory::ParseTypeFromString(target_type_name);
   if (target_type != nullptr) {
-    target_type_name = target_type->getName();
+    target_type_name = ToLower(target_type->getName());
   }
   if (getOperatorPrecedence() < argument_precedence) {
     return "(" + argument + ")::" + target_type_name;

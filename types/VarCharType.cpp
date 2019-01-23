@@ -42,6 +42,8 @@ using std::string;
 
 namespace quickstep {
 
+constexpr TypeID VarCharType::kStaticTypeID;
+
 template <bool nullable_internal>
 const VarCharType& VarCharType::InstanceInternal(const std::size_t length) {
   static PtrMap<size_t, VarCharType> instance_map;

@@ -85,6 +85,7 @@ target_link_libraries(quickstep_types_operations_binaryoperations_CxxMathBinaryO
                       quickstep_types_FloatType
                       quickstep_types_IntType
                       quickstep_types_LongType
+                      quickstep_types_operations_OperatorPrecedence
                       quickstep_types_operations_binaryoperations_BinaryFunctor
                       quickstep_utility_meta_StringConstant
                       quickstep_utility_meta_TypeList)

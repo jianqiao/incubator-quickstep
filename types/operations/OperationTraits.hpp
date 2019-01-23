@@ -152,6 +152,7 @@ struct OperationResultTraits<
   using ColumnVectorType = NativeColumnVector;
 
   using ValueType = typename ResultTypeClass::cpptype;
+  using ValuePointer = ValueType*;
   using ConstPointer = const ValueType*;
 };
 
@@ -163,6 +164,7 @@ struct OperationResultTraits<
   using ColumnVectorType = NativeColumnVector;
 
   using ValueType = void*;
+  using ValuePointer = void*;
   using ConstPointer = const void*;
 };
 
@@ -174,6 +176,7 @@ struct OperationResultTraits<
   using ColumnVectorType = IndirectColumnVector;
 
   using ValueType = TypedValue;
+  using ValuePointer = TypedValue*;
   using ConstPointer = const TypedValue*;
 };
 

@@ -44,6 +44,20 @@ target_link_libraries(quickstep_types_operations_unaryoperations_ArithmeticUnary
                       quickstep_types_operations_unaryoperations_UnaryFunctor
                       quickstep_utility_meta_StringConstant
                       quickstep_utility_meta_TypeList)
+target_link_libraries(quickstep_types_operations_unaryoperations_AsciiStringUnaryOperations
+                      glog
+                      quickstep_types_CharType
+                      quickstep_types_IntType
+                      quickstep_types_LongType
+                      quickstep_types_Type
+                      quickstep_types_TypeID
+                      quickstep_types_VarCharType
+                      quickstep_types_operations_OperationSignature
+                      quickstep_types_operations_OperatorPrecedence
+                      quickstep_types_operations_unaryoperations_UnaryFunctor
+                      quickstep_types_port_strnlen
+                      quickstep_utility_meta_StringConstant
+                      quickstep_utility_meta_TypeList)
 target_link_libraries(quickstep_types_operations_unaryoperations_CastOperation
                       glog
                       quickstep_types_CharType
@@ -68,6 +82,7 @@ target_link_libraries(quickstep_types_operations_unaryoperations_CastOperation
                       quickstep_types_operations_unaryoperations_UnaryOperation
                       quickstep_types_operations_unaryoperations_UnaryOperationCodeGen
                       quickstep_utility_EqualsAnyConstant
+                      quickstep_utility_StringUtil
                       quickstep_utility_meta_Common
                       quickstep_utility_meta_MultipleDispatcher
                       quickstep_utility_meta_StringConstant
